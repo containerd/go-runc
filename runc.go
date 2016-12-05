@@ -108,11 +108,12 @@ func (r *Runc) Start(id string) error {
 
 type ExecOpts struct {
 	IO
-	Uid    int
-	Gid    int
-	Cwd    string
-	Tty    bool
-	Detach bool
+	PidFile string
+	Uid     int
+	Gid     int
+	Cwd     string
+	Tty     bool
+	Detach  bool
 }
 
 func (o *ExecOpts) args() (out []string) {
@@ -125,6 +126,9 @@ func (o *ExecOpts) args() (out []string) {
 	}
 	if o.Detach {
 		out = append(out, "--detach")
+	}
+	if o.PidFile != "" {
+		out = append(out, "--pid-file", o.PidFile)
 	}
 	return out
 }
@@ -160,7 +164,7 @@ func (r *Runc) ExecProcess(id string, spec specs.Process, opts *ExecOpts) error 
 	if opts != nil {
 		args = append(args, opts.args()...)
 	}
-	cmd := r.command(args...)
+	cmd := r.command(append(args, id)...)
 	if opts != nil {
 		opts.setSTDIO(cmd)
 	}
