@@ -4,12 +4,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"os"
 	"os/exec"
 	"strconv"
 	"syscall"
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
 // Runc is the client to the runc cli
@@ -45,14 +48,25 @@ func (r *Runc) State(id string) (*Container, error) {
 }
 
 type CreateOpts struct {
+	IO
 	// PidFile is a path to where a pid file should be created
 	PidFile      string
 	Console      string
+	Detach       bool
 	NoPivot      bool
 	NoNewKeyring bool
-	Stdin        io.Reader
-	Stdout       io.Writer
-	Stderr       io.Writer
+}
+
+type IO struct {
+	Stdin  io.Reader
+	Stdout io.Writer
+	Stderr io.Writer
+}
+
+func (o IO) setSTDIO(cmd *exec.Cmd) {
+	cmd.Stdin = o.Stdin
+	cmd.Stdout = o.Stdout
+	cmd.Stderr = o.Stderr
 }
 
 func (o *CreateOpts) args() (out []string) {
@@ -68,13 +82,10 @@ func (o *CreateOpts) args() (out []string) {
 	if o.NoNewKeyring {
 		out = append(out, "--no-new-keyring")
 	}
+	if o.Detach {
+		out = append(out, "--detach")
+	}
 	return out
-}
-
-func (o *CreateOpts) setSTDIO(cmd *exec.Cmd) {
-	cmd.Stdin = o.Stdin
-	cmd.Stdout = o.Stdout
-	cmd.Stderr = o.Stderr
 }
 
 // Create creates a new container and returns its pid if it was created successfully
@@ -96,13 +107,12 @@ func (r *Runc) Start(id string) error {
 }
 
 type ExecOpts struct {
+	IO
 	Uid    int
 	Gid    int
 	Cwd    string
 	Tty    bool
-	Stdin  io.Reader
-	Stdout io.Writer
-	Stderr io.Writer
+	Detach bool
 }
 
 func (o *ExecOpts) args() (out []string) {
@@ -113,13 +123,10 @@ func (o *ExecOpts) args() (out []string) {
 	if o.Cwd != "" {
 		out = append(out, "--cwd", o.Cwd)
 	}
+	if o.Detach {
+		out = append(out, "--detach")
+	}
 	return out
-}
-
-func (o *ExecOpts) setSTDIO(cmd *exec.Cmd) {
-	cmd.Stdin = o.Stdin
-	cmd.Stdout = o.Stdout
-	cmd.Stderr = o.Stderr
 }
 
 // Exec executes an additional process inside a container
@@ -130,6 +137,30 @@ func (r *Runc) Exec(id string, args []string, opts *ExecOpts) error {
 	}
 	args = append(bargs, id)
 	cmd := r.command(append(bargs, args...)...)
+	if opts != nil {
+		opts.setSTDIO(cmd)
+	}
+	return runOrError(cmd)
+}
+
+// ExecProcess executres and additional process inside the container based on a full
+// OCI Process specification
+func (r *Runc) ExecProcess(id string, spec specs.Process, opts *ExecOpts) error {
+	f, err := ioutil.TempFile("", "-process")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(f.Name())
+	err = json.NewEncoder(f).Encode(spec)
+	f.Close()
+	if err != nil {
+		return err
+	}
+	args := []string{"exec", "--process", f.Name()}
+	if opts != nil {
+		args = append(args, opts.args()...)
+	}
+	cmd := r.command(args...)
 	if opts != nil {
 		opts.setSTDIO(cmd)
 	}
