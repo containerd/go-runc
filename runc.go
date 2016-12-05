@@ -259,6 +259,29 @@ func (r *Runc) Events(id string, interval time.Duration) (chan *Event, error) {
 	return c, nil
 }
 
+// Pause the container with the provided id
+func (r *Runc) Pause(id string) error {
+	return runOrError(r.command("pause", id))
+}
+
+// Resume the container with the provided id
+func (r *Runc) Resume(id string) error {
+	return runOrError(r.command("resume", id))
+}
+
+// Ps lists all the processes inside the container returning their pids
+func (r *Runc) Ps(id string) ([]int, error) {
+	data, err := r.command("ps", "--format", "json", id).CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("%s: %s", err, data)
+	}
+	var pids []int
+	if err := json.Unmarshal(data, &pids); err != nil {
+		return nil, err
+	}
+	return pids, nil
+}
+
 func (r *Runc) args() (out []string) {
 	if r.Root != "" {
 		out = append(out, "--root", r.Root)
