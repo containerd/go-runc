@@ -194,12 +194,12 @@ func (r *Runc) Run(id, bundle string, opts *CreateOpts) (int, error) {
 
 // Delete deletes the container
 func (r *Runc) Delete(id string) error {
-	return r.command("delete", id).Run()
+	return runOrError(r.command("delete", id))
 }
 
 // Kill sends the specified signal to the container
 func (r *Runc) Kill(id string, sig int) error {
-	return r.command("kill", id, strconv.Itoa(sig)).Run()
+	return runOrError(r.command("kill", id, strconv.Itoa(sig)))
 }
 
 // Stats return the stats for a container like cpu, memory, and io
