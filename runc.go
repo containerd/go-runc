@@ -15,10 +15,21 @@ import (
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
+// Format is the type of log formatting options avaliable
+type Format string
+
+const (
+	none Format = ""
+	JSON Format = "json"
+	Text Format = "text"
+)
+
 // Runc is the client to the runc cli
 type Runc struct {
-	Root  string
-	Debug bool
+	Root      string
+	Debug     bool
+	Log       string
+	LogFormat Format
 }
 
 // List returns all containers created inside the provided runc root directory
@@ -288,6 +299,12 @@ func (r *Runc) args() (out []string) {
 	}
 	if r.Debug {
 		out = append(out, "--debug")
+	}
+	if r.Log != "" {
+		out = append(out, "--log", r.Log)
+	}
+	if r.LogFormat != none {
+		out = append(out, "--log-format", string(r.LogFormat))
 	}
 	return out
 }
