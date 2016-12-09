@@ -125,6 +125,7 @@ type ExecOpts struct {
 	Gid     int
 	Cwd     string
 	Tty     bool
+	Console string
 	Detach  bool
 }
 
@@ -132,6 +133,9 @@ func (o *ExecOpts) args() (out []string) {
 	out = append(out, "--user", fmt.Sprintf("%d:%d", o.Uid, o.Gid))
 	if o.Tty {
 		out = append(out, "--tty")
+	}
+	if o.Console != "" {
+		out = append(out, "--console", o.Console)
 	}
 	if o.Cwd != "" {
 		out = append(out, "--cwd", o.Cwd)
