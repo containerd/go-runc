@@ -75,6 +75,22 @@ type IO struct {
 	Stderr io.Writer
 }
 
+func (i *IO) Close() error {
+	var err error
+	for _, v := range []interface{}{
+		i.Stdin,
+		i.Stderr,
+		i.Stdout,
+	} {
+		if c, ok := v.(io.Closer); ok {
+			if cerr := c.Close(); err == nil {
+				err = cerr
+			}
+		}
+	}
+	return err
+}
+
 func (o IO) setSTDIO(cmd *exec.Cmd) {
 	cmd.Stdin = o.Stdin
 	cmd.Stdout = o.Stdout
