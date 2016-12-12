@@ -82,9 +82,11 @@ func (i *IO) Close() error {
 		i.Stderr,
 		i.Stdout,
 	} {
-		if c, ok := v.(io.Closer); ok {
-			if cerr := c.Close(); err == nil {
-				err = cerr
+		if v != nil {
+			if c, ok := v.(io.Closer); ok {
+				if cerr := c.Close(); err == nil {
+					err = cerr
+				}
 			}
 		}
 	}
