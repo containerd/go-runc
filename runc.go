@@ -23,10 +23,14 @@ const (
 	none Format = ""
 	JSON Format = "json"
 	Text Format = "text"
+	// DefaultCommand is the default command for Runc
+	DefaultCommand string = "runc"
 )
 
 // Runc is the client to the runc cli
 type Runc struct {
+	//If command is empty, DefaultCommand is used
+	Command   string
 	Root      string
 	Debug     bool
 	Log       string
@@ -319,6 +323,10 @@ func (r *Runc) args() (out []string) {
 }
 
 func (r *Runc) command(context context.Context, args ...string) *exec.Cmd {
+	command := r.Command
+	if command == "" {
+		command = DefaultCommand
+	}
 	return exec.CommandContext(context,
-		"runc", append(r.args(), args...)...)
+		command, append(r.args(), args...)...)
 }
