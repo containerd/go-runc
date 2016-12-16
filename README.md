@@ -6,7 +6,7 @@ It tries to expose all the settings and features of the runc CLI.
 
 ## Docs
 
-Docs can be found at [godocs.org](https://godoc.org/github.com/crosbymichael/go-runc).
+Docs can be found at [godoc.org](https://godoc.org/github.com/crosbymichael/go-runc).
 
 
 ## LICENSE - MIT
