@@ -66,11 +66,11 @@ func (r *Runc) State(context context.Context, id string) (*Container, error) {
 type CreateOpts struct {
 	IO
 	// PidFile is a path to where a pid file should be created
-	PidFile      string
-	Console      string
-	Detach       bool
-	NoPivot      bool
-	NoNewKeyring bool
+	PidFile       string
+	ConsoleSocket string
+	Detach        bool
+	NoPivot       bool
+	NoNewKeyring  bool
 }
 
 type IO struct {
@@ -107,8 +107,8 @@ func (o *CreateOpts) args() (out []string) {
 	if o.PidFile != "" {
 		out = append(out, "--pid-file", o.PidFile)
 	}
-	if o.Console != "" {
-		out = append(out, "--console", o.Console)
+	if o.ConsoleSocket != "" {
+		out = append(out, "--console-socket", o.ConsoleSocket)
 	}
 	if o.NoPivot {
 		out = append(out, "--no-pivot")
@@ -142,13 +142,13 @@ func (r *Runc) Start(context context.Context, id string) error {
 
 type ExecOpts struct {
 	IO
-	PidFile string
-	Uid     int
-	Gid     int
-	Cwd     string
-	Tty     bool
-	Console string
-	Detach  bool
+	PidFile       string
+	Uid           int
+	Gid           int
+	Cwd           string
+	Tty           bool
+	ConsoleSocket string
+	Detach        bool
 }
 
 func (o *ExecOpts) args() (out []string) {
@@ -156,8 +156,8 @@ func (o *ExecOpts) args() (out []string) {
 	if o.Tty {
 		out = append(out, "--tty")
 	}
-	if o.Console != "" {
-		out = append(out, "--console", o.Console)
+	if o.ConsoleSocket != "" {
+		out = append(out, "--console", o.ConsoleSocket)
 	}
 	if o.Cwd != "" {
 		out = append(out, "--cwd", o.Cwd)
