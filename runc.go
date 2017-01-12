@@ -13,7 +13,6 @@ import (
 	"time"
 
 	specs "github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/sirupsen/logrus"
 )
 
 // Format is the type of log formatting options avaliable
@@ -274,8 +273,10 @@ func (r *Runc) Events(context context.Context, id string, interval time.Duration
 				if err == io.EOF {
 					return
 				}
-				logrus.WithError(err).Error("runc: decode event")
-				continue
+				e = Event{
+					Type: "error",
+					Err:  err,
+				}
 			}
 			c <- &e
 		}
