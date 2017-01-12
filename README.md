@@ -1,5 +1,8 @@
 # go-runc
 
+[![Build Status](https://travis-ci.org/crosbymichael/go-runc.svg?branch=master)](https://travis-ci.org/crosbymichael/go-runc)
+
+
 This is a package for consuming the [runc](https://github.com/opencontainers/runc) binary in your Go applications.
 It tries to expose all the settings and features of the runc CLI.
 
