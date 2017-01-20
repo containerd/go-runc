@@ -29,11 +29,12 @@ const (
 // Runc is the client to the runc cli
 type Runc struct {
 	//If command is empty, DefaultCommand is used
-	Command   string
-	Root      string
-	Debug     bool
-	Log       string
-	LogFormat Format
+	Command      string
+	Root         string
+	Debug        bool
+	Log          string
+	LogFormat    Format
+	PdeathSignal syscall.Signal
 }
 
 // List returns all containers created inside the provided runc root directory
@@ -220,9 +221,27 @@ func (r *Runc) Delete(context context.Context, id string) error {
 	return runOrError(r.command(context, "delete", id))
 }
 
+// KillOpts specifies options for killing a container and its processes
+type KillOpts struct {
+	All bool
+}
+
+func (o *KillOpts) args() (out []string) {
+	if o.All {
+		out = append(out, "--all")
+	}
+	return out
+}
+
 // Kill sends the specified signal to the container
-func (r *Runc) Kill(context context.Context, id string, sig int) error {
-	return runOrError(r.command(context, "kill", id, strconv.Itoa(sig)))
+func (r *Runc) Kill(context context.Context, id string, sig int, opts *KillOpts) error {
+	args := []string{
+		"kill",
+	}
+	if opts != nil {
+		args = append(args, opts.args()...)
+	}
+	return runOrError(r.command(context, append(args, id, strconv.Itoa(sig))...))
 }
 
 // Stats return the stats for a container like cpu, memory, and io
@@ -328,6 +347,11 @@ func (r *Runc) command(context context.Context, args ...string) *exec.Cmd {
 	if command == "" {
 		command = DefaultCommand
 	}
-	return exec.CommandContext(context,
-		command, append(r.args(), args...)...)
+	cmd := exec.CommandContext(context, command, append(r.args(), args...)...)
+	if r.PdeathSignal != 0 {
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			Pdeathsig: r.PdeathSignal,
+		}
+	}
+	return cmd
 }
