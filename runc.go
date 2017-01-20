@@ -157,7 +157,7 @@ func (o *ExecOpts) args() (out []string) {
 		out = append(out, "--tty")
 	}
 	if o.ConsoleSocket != "" {
-		out = append(out, "--console", o.ConsoleSocket)
+		out = append(out, "--console-socket", o.ConsoleSocket)
 	}
 	if o.Cwd != "" {
 		out = append(out, "--cwd", o.Cwd)
