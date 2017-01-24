@@ -8,6 +8,7 @@ import (
 )
 
 type IO interface {
+	io.Closer
 	Stdin() io.WriteCloser
 	Stdout() io.ReadCloser
 	Stderr() io.ReadCloser
