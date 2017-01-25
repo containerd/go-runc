@@ -119,7 +119,6 @@ func (i *pipeIO) Close() error {
 
 func (i *pipeIO) CloseAfterStart() error {
 	for _, f := range []*os.File{
-		i.in.r,
 		i.out.w,
 		i.err.w,
 	} {
