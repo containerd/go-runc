@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
 
 	"github.com/docker/docker/pkg/term"
 	"github.com/opencontainers/runc/libcontainer/utils"
@@ -12,13 +13,17 @@ import (
 // NewConsoleSocket creates a new unix socket at the provided path to accept a
 // pty master created by runc for use by the container
 func NewConsoleSocket(path string) (*ConsoleSocket, error) {
-	l, err := net.Listen("unix", path)
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return nil, err
+	}
+	l, err := net.Listen("unix", abs)
 	if err != nil {
 		return nil, err
 	}
 	return &ConsoleSocket{
 		l:    l,
-		path: path,
+		path: abs,
 	}, nil
 }
 
