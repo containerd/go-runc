@@ -15,6 +15,10 @@ type IO interface {
 	Set(*exec.Cmd)
 }
 
+type StartCloser interface {
+	CloseAfterStart() error
+}
+
 // NewPipeIO creates pipe pairs to be used with runc
 func NewPipeIO(uid, gid int) (i IO, err error) {
 	var pipes []*pipe
@@ -111,6 +115,17 @@ func (i *pipeIO) Close() error {
 		}
 	}
 	return err
+}
+
+func (i *pipeIO) CloseAfterStart() error {
+	for _, f := range []*os.File{
+		i.in.r,
+		i.out.w,
+		i.err.w,
+	} {
+		f.Close()
+	}
+	return nil
 }
 
 // Set sets the io to the exec.Cmd
