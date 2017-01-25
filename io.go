@@ -96,11 +96,11 @@ func (i *pipeIO) Stdin() io.WriteCloser {
 }
 
 func (i *pipeIO) Stdout() io.ReadCloser {
-	return i.in.r
+	return i.out.r
 }
 
 func (i *pipeIO) Stderr() io.ReadCloser {
-	return i.in.r
+	return i.err.r
 }
 
 func (i *pipeIO) Close() error {
@@ -132,4 +132,33 @@ func (i *pipeIO) Set(cmd *exec.Cmd) {
 	cmd.Stdin = i.in.r
 	cmd.Stdout = i.out.w
 	cmd.Stderr = i.err.w
+}
+
+func NewSTDIO() (IO, error) {
+	return &stdio{}, nil
+}
+
+type stdio struct {
+}
+
+func (s *stdio) Close() error {
+	return nil
+}
+
+func (s *stdio) Set(cmd *exec.Cmd) {
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+}
+
+func (s *stdio) Stdin() io.WriteCloser {
+	return os.Stdin
+}
+
+func (s *stdio) Stdout() io.ReadCloser {
+	return os.Stdout
+}
+
+func (s *stdio) Stderr() io.ReadCloser {
+	return os.Stderr
 }
