@@ -193,7 +193,7 @@ func (r *Runc) Exec(context context.Context, id string, spec specs.Process, opts
 		args = append(args, oargs...)
 	}
 	cmd := r.command(context, append(args, id)...)
-	if opts != nil {
+	if opts != nil && opts.IO != nil {
 		opts.Set(cmd)
 	}
 	return runOrError(cmd)
