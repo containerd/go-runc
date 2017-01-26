@@ -139,24 +139,13 @@ func (r *Runc) Start(context context.Context, id string) error {
 type ExecOpts struct {
 	IO
 	PidFile       string
-	Uid           int
-	Gid           int
-	Cwd           string
-	Tty           bool
 	ConsoleSocket *ConsoleSocket
 	Detach        bool
 }
 
 func (o *ExecOpts) args() (out []string, err error) {
-	out = append(out, "--user", fmt.Sprintf("%d:%d", o.Uid, o.Gid))
-	if o.Tty {
-		out = append(out, "--tty")
-	}
 	if o.ConsoleSocket != nil {
 		out = append(out, "--console-socket", o.ConsoleSocket.Path())
-	}
-	if o.Cwd != "" {
-		out = append(out, "--cwd", o.Cwd)
 	}
 	if o.Detach {
 		out = append(out, "--detach")
