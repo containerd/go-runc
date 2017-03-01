@@ -72,6 +72,7 @@ type CreateOpts struct {
 	Detach        bool
 	NoPivot       bool
 	NoNewKeyring  bool
+	ExtraFiles    []*os.File
 }
 
 func (o *CreateOpts) args() (out []string, err error) {
@@ -94,6 +95,9 @@ func (o *CreateOpts) args() (out []string, err error) {
 	if o.Detach {
 		out = append(out, "--detach")
 	}
+	if o.ExtraFiles != nil {
+		out = append(out, "--preserve-fds", strconv.Itoa(len(o.ExtraFiles)))
+	}
 	return out, nil
 }
 
@@ -111,6 +115,8 @@ func (r *Runc) Create(context context.Context, id, bundle string, opts *CreateOp
 	if opts != nil && opts.IO != nil {
 		opts.Set(cmd)
 	}
+	cmd.ExtraFiles = opts.ExtraFiles
+
 	if cmd.Stdout == nil && cmd.Stderr == nil {
 		data, err := cmd.CombinedOutput()
 		if err != nil {
