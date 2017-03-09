@@ -40,7 +40,7 @@ type Runc struct {
 
 // List returns all containers created inside the provided runc root directory
 func (r *Runc) List(context context.Context) ([]*Container, error) {
-	data, err := r.command(context, "list", "--format=json").Output()
+	data, err := Monitor.Output(r.command(context, "list", "--format=json"))
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func (r *Runc) List(context context.Context) ([]*Container, error) {
 
 // State returns the state for the container provided by id
 func (r *Runc) State(context context.Context, id string) (*Container, error) {
-	data, err := r.command(context, "state", id).CombinedOutput()
+	data, err := Monitor.CombinedOutput(r.command(context, "state", id))
 	if err != nil {
 		return nil, fmt.Errorf("%s: %s", err, data)
 	}
@@ -118,13 +118,13 @@ func (r *Runc) Create(context context.Context, id, bundle string, opts *CreateOp
 	cmd.ExtraFiles = opts.ExtraFiles
 
 	if cmd.Stdout == nil && cmd.Stderr == nil {
-		data, err := cmd.CombinedOutput()
+		data, err := Monitor.CombinedOutput(cmd)
 		if err != nil {
 			return fmt.Errorf("%s: %s", err, data)
 		}
 		return nil
 	}
-	if err := cmd.Start(); err != nil {
+	if err := Monitor.Start(cmd); err != nil {
 		return err
 	}
 	if opts != nil && opts.IO != nil {
@@ -134,12 +134,13 @@ func (r *Runc) Create(context context.Context, id, bundle string, opts *CreateOp
 			}
 		}
 	}
-	return cmd.Wait()
+	_, err := Monitor.Wait(cmd)
+	return err
 }
 
 // Start will start an already created container
 func (r *Runc) Start(context context.Context, id string) error {
-	return runOrError(r.command(context, "start", id))
+	return r.runOrError(r.command(context, "start", id))
 }
 
 type ExecOpts struct {
@@ -192,13 +193,13 @@ func (r *Runc) Exec(context context.Context, id string, spec specs.Process, opts
 		opts.Set(cmd)
 	}
 	if cmd.Stdout == nil && cmd.Stderr == nil {
-		data, err := cmd.CombinedOutput()
+		data, err := Monitor.CombinedOutput(cmd)
 		if err != nil {
 			return fmt.Errorf("%s: %s", err, data)
 		}
 		return nil
 	}
-	if err := cmd.Start(); err != nil {
+	if err := Monitor.Start(cmd); err != nil {
 		return err
 	}
 	if opts != nil && opts.IO != nil {
@@ -208,7 +209,8 @@ func (r *Runc) Exec(context context.Context, id string, spec specs.Process, opts
 			}
 		}
 	}
-	return cmd.Wait()
+	_, err = Monitor.Wait(cmd)
+	return err
 }
 
 // Run runs the create, start, delete lifecycle of the container
@@ -226,19 +228,15 @@ func (r *Runc) Run(context context.Context, id, bundle string, opts *CreateOpts)
 	if opts != nil {
 		opts.Set(cmd)
 	}
-	if err := cmd.Start(); err != nil {
+	if err := Monitor.Start(cmd); err != nil {
 		return -1, err
 	}
-	status, err := cmd.Process.Wait()
-	if err != nil {
-		return -1, err
-	}
-	return status.Sys().(syscall.WaitStatus).ExitStatus(), nil
+	return Monitor.Wait(cmd)
 }
 
 // Delete deletes the container
 func (r *Runc) Delete(context context.Context, id string) error {
-	return runOrError(r.command(context, "delete", id))
+	return r.runOrError(r.command(context, "delete", id))
 }
 
 // KillOpts specifies options for killing a container and its processes
@@ -261,7 +259,7 @@ func (r *Runc) Kill(context context.Context, id string, sig int, opts *KillOpts)
 	if opts != nil {
 		args = append(args, opts.args()...)
 	}
-	return runOrError(r.command(context, append(args, id, strconv.Itoa(sig))...))
+	return r.runOrError(r.command(context, append(args, id, strconv.Itoa(sig))...))
 }
 
 // Stats return the stats for a container like cpu, memory, and io
@@ -273,9 +271,9 @@ func (r *Runc) Stats(context context.Context, id string) (*Stats, error) {
 	}
 	defer func() {
 		rd.Close()
-		cmd.Wait()
+		Monitor.Wait(cmd)
 	}()
-	if err := cmd.Start(); err != nil {
+	if err := Monitor.Start(cmd); err != nil {
 		return nil, err
 	}
 	var e Event
@@ -292,7 +290,7 @@ func (r *Runc) Events(context context.Context, id string, interval time.Duration
 	if err != nil {
 		return nil, err
 	}
-	if err := cmd.Start(); err != nil {
+	if err := Monitor.Start(cmd); err != nil {
 		rd.Close()
 		return nil, err
 	}
@@ -304,7 +302,7 @@ func (r *Runc) Events(context context.Context, id string, interval time.Duration
 		defer func() {
 			close(c)
 			rd.Close()
-			cmd.Wait()
+			Monitor.Wait(cmd)
 		}()
 		for {
 			var e Event
@@ -325,17 +323,17 @@ func (r *Runc) Events(context context.Context, id string, interval time.Duration
 
 // Pause the container with the provided id
 func (r *Runc) Pause(context context.Context, id string) error {
-	return runOrError(r.command(context, "pause", id))
+	return r.runOrError(r.command(context, "pause", id))
 }
 
 // Resume the container with the provided id
 func (r *Runc) Resume(context context.Context, id string) error {
-	return runOrError(r.command(context, "resume", id))
+	return r.runOrError(r.command(context, "resume", id))
 }
 
 // Ps lists all the processes inside the container returning their pids
 func (r *Runc) Ps(context context.Context, id string) ([]int, error) {
-	data, err := r.command(context, "ps", "--format", "json", id).CombinedOutput()
+	data, err := Monitor.CombinedOutput(r.command(context, "ps", "--format", "json", id))
 	if err != nil {
 		return nil, fmt.Errorf("%s: %s", err, data)
 	}
@@ -374,4 +372,19 @@ func (r *Runc) command(context context.Context, args ...string) *exec.Cmd {
 		}
 	}
 	return cmd
+}
+
+// runOrError will run the provided command.  If an error is
+// encountered and neither Stdout or Stderr was set the error and the
+// stderr of the command will be returned in the format of <error>:
+// <stderr>
+func (r *Runc) runOrError(cmd *exec.Cmd) error {
+	if cmd.Stdout != nil || cmd.Stderr != nil {
+		return Monitor.Run(cmd)
+	}
+	data, err := Monitor.CombinedOutput(cmd)
+	if err != nil {
+		return fmt.Errorf("%s: %s", err, data)
+	}
+	return nil
 }
