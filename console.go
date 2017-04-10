@@ -13,7 +13,7 @@ import (
 
 // NewConsoleSocket creates a new unix socket at the provided path to accept a
 // pty master created by runc for use by the container
-func NewConsoleSocket(path string) (*socket, error) {
+func NewConsoleSocket(path string) (*Socket, error) {
 	abs, err := filepath.Abs(path)
 	if err != nil {
 		return nil, err
@@ -22,25 +22,25 @@ func NewConsoleSocket(path string) (*socket, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &socket{
+	return &Socket{
 		l:    l,
 		path: abs,
 	}, nil
 }
 
-// socket is a unix socket that accepts the pty master created by runc
-type socket struct {
+// Socket is a unix socket that accepts the pty master created by runc
+type Socket struct {
 	path string
 	l    net.Listener
 }
 
 // Path returns the path to the unix socket on disk
-func (c *socket) Path() string {
+func (c *Socket) Path() string {
 	return c.path
 }
 
 // ReceiveMaster blocks until the socket receives the pty master
-func (c *socket) ReceiveMaster() (console.Console, error) {
+func (c *Socket) ReceiveMaster() (console.Console, error) {
 	conn, err := c.l.Accept()
 	if err != nil {
 		return nil, err
@@ -62,14 +62,6 @@ func (c *socket) ReceiveMaster() (console.Console, error) {
 }
 
 // Close closes the unix socket
-func (c *socket) Close() error {
+func (c *Socket) Close() error {
 	return c.l.Close()
-}
-
-// WinSize specifies the console size
-type WinSize struct {
-	// Width of the console
-	Width uint16
-	// Height of the console
-	Height uint16
 }
