@@ -441,6 +441,57 @@ func (r *Runc) Checkpoint(context context.Context, id string, opts *CheckpointOp
 	return r.runOrError(r.command(context, append(args, id)...))
 }
 
+type RestoreOpts struct {
+	CheckpointOpts
+	IO
+
+	Detach      bool
+	PidFile     string
+	NoSubreaper bool
+	NoPivot     bool
+}
+
+func (o *RestoreOpts) args() ([]string, error) {
+	out := o.CheckpointOpts.args()
+	if o.Detach {
+		out = append(out, "--detach")
+	}
+	if o.PidFile != "" {
+		abs, err := filepath.Abs(o.PidFile)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, "--pid-file", abs)
+	}
+	if o.NoPivot {
+		out = append(out, "--no-pivot")
+	}
+	if o.NoSubreaper {
+		out = append(out, "-no-subreaper")
+	}
+	return out, nil
+}
+
+func (r *Runc) Restore(context context.Context, id, bundle string, opts *RestoreOpts) (int, error) {
+	args := []string{"restore"}
+	if opts != nil {
+		oargs, err := opts.args()
+		if err != nil {
+			return -1, err
+		}
+		args = append(args, oargs...)
+	}
+	args = append(args, "--bundle", bundle)
+	cmd := r.command(context, append(args, id)...)
+	if opts != nil {
+		opts.Set(cmd)
+	}
+	if err := Monitor.Start(cmd); err != nil {
+		return -1, err
+	}
+	return Monitor.Wait(cmd)
+}
+
 func (r *Runc) args() (out []string) {
 	if r.Root != "" {
 		out = append(out, "--root", r.Root)
