@@ -1,6 +1,7 @@
 package runc
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -409,10 +410,8 @@ func (o *CheckpointOpts) args() (out []string) {
 	if string(o.Cgroups) != "" {
 		out = append(out, "--manage-cgroups-mode", string(o.Cgroups))
 	}
-	if len(o.EmptyNamespaces) > 0 {
-		for _, ns := range o.EmptyNamespaces {
-			out = append(out, "--empty-ns", ns)
-		}
+	for _, ns := range o.EmptyNamespaces {
+		out = append(out, "--empty-ns", ns)
 	}
 	return out
 }
@@ -472,6 +471,7 @@ func (o *RestoreOpts) args() ([]string, error) {
 	return out, nil
 }
 
+// Restore restores a container with the provide id from an existing checkpoint
 func (r *Runc) Restore(context context.Context, id, bundle string, opts *RestoreOpts) (int, error) {
 	args := []string{"restore"}
 	if opts != nil {
@@ -490,6 +490,18 @@ func (r *Runc) Restore(context context.Context, id, bundle string, opts *Restore
 		return -1, err
 	}
 	return Monitor.Wait(cmd)
+}
+
+// Update updates the current container with the provided resource spec
+func (r *Runc) Update(context context.Context, id string, resources *specs.LinuxResources) error {
+	buf := bytes.NewBuffer(nil)
+	if err := json.NewEncoder(buf).Encode(resources); err != nil {
+		return err
+	}
+	args := []string{"update", "--resources", "-", id}
+	cmd := r.command(context, args...)
+	cmd.Stdin = buf
+	return r.runOrError(cmd)
 }
 
 func (r *Runc) args() (out []string) {
