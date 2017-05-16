@@ -11,6 +11,9 @@ func TestTempConsole(t *testing.T) {
 		t.Fatal(err)
 	}
 	path := c.Path()
+	if _, err := os.Stat(path); err != nil {
+		t.Fatal(err)
+	}
 	if err := c.Close(); err != nil {
 		t.Fatal(err)
 	}
