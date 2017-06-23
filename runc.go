@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -11,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -525,6 +527,56 @@ func (r *Runc) Update(context context.Context, id string, resources *specs.Linux
 	cmd := r.command(context, args...)
 	cmd.Stdin = buf
 	return r.runOrError(cmd)
+}
+
+var ErrParseRuncVersion = errors.New("unable to parse runc version")
+
+type Version struct {
+	Runc   string
+	Commit string
+	Spec   string
+}
+
+// Version returns the runc and runtime-spec versions
+func (r *Runc) Version(context context.Context) (Version, error) {
+	data, err := Monitor.Output(r.command(context, "--version"))
+	if err != nil {
+		return Version{}, err
+	}
+	return parseVersion(data)
+}
+
+func parseVersion(data []byte) (Version, error) {
+	var v Version
+	parts := strings.Split(strings.TrimSpace(string(data)), "\n")
+	if len(parts) != 3 {
+		return v, ErrParseRuncVersion
+	}
+
+	for i, p := range []struct {
+		dest  *string
+		split string
+	}{
+		{
+			dest:  &v.Runc,
+			split: "version ",
+		},
+		{
+			dest:  &v.Commit,
+			split: ": ",
+		},
+		{
+			dest:  &v.Spec,
+			split: ": ",
+		},
+	} {
+		p2 := strings.Split(parts[i], p.split)
+		if len(p2) != 2 {
+			return v, fmt.Errorf("unable to parse version line %q", parts[i])
+		}
+		*p.dest = p2[1]
+	}
+	return v, nil
 }
 
 func (r *Runc) args() (out []string) {
