@@ -31,13 +31,14 @@ const (
 // Runc is the client to the runc cli
 type Runc struct {
 	//If command is empty, DefaultCommand is used
-	Command      string
-	Root         string
-	Debug        bool
-	Log          string
-	LogFormat    Format
-	PdeathSignal syscall.Signal
-	Criu         string
+	Command       string
+	Root          string
+	Debug         bool
+	Log           string
+	LogFormat     Format
+	PdeathSignal  syscall.Signal
+	Criu          string
+	SystemdCgroup string
 }
 
 // List returns all containers created inside the provided runc root directory
@@ -541,6 +542,9 @@ func (r *Runc) args() (out []string) {
 	}
 	if r.Criu != "" {
 		out = append(out, "--criu", r.Criu)
+	}
+	if r.SystemdCgroup != "" {
+		out = append(out, "--systemd-cgroup", r.SystemdCgroup)
 	}
 	return out
 }
