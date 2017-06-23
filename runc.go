@@ -240,9 +240,24 @@ func (r *Runc) Run(context context.Context, id, bundle string, opts *CreateOpts)
 	return Monitor.Wait(cmd)
 }
 
+type DeleteOpts struct {
+	Force bool
+}
+
+func (o *DeleteOpts) args() (out []string) {
+	if o.Force {
+		out = append(out, "--force")
+	}
+	return out
+}
+
 // Delete deletes the container
-func (r *Runc) Delete(context context.Context, id string) error {
-	return r.runOrError(r.command(context, "delete", id))
+func (r *Runc) Delete(context context.Context, id string, opts *DeleteOpts) error {
+	args := []string{"delete"}
+	if opts != nil {
+		args = append(args, opts.args()...)
+	}
+	return r.runOrError(r.command(context, append(args, id)...))
 }
 
 // KillOpts specifies options for killing a container and its processes
