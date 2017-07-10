@@ -179,7 +179,7 @@ func (o *ExecOpts) args() (out []string, err error) {
 
 // Exec executres and additional process inside the container based on a full
 // OCI Process specification
-func (r *Runc) Exec(context context.Context, id string, spec specs.Process, opts *ExecOpts) error {
+func (r *Runc) Exec(ctx context.Context, id string, spec specs.Process, opts *ExecOpts) error {
 	f, err := ioutil.TempFile("", "runc-process")
 	if err != nil {
 		return err
@@ -198,7 +198,9 @@ func (r *Runc) Exec(context context.Context, id string, spec specs.Process, opts
 		}
 		args = append(args, oargs...)
 	}
-	cmd := r.command(context, append(args, id)...)
+
+	ctxKill, cancel := context.WithCancel(context.Background())
+	cmd := r.command(ctxKill, append(args, id)...)
 	if opts != nil && opts.IO != nil {
 		opts.Set(cmd)
 	}
@@ -219,8 +221,29 @@ func (r *Runc) Exec(context context.Context, id string, spec specs.Process, opts
 			}
 		}
 	}
-	_, err = Monitor.Wait(cmd)
-	return err
+
+	result := make(chan error, 1)
+
+	go func() {
+		rc, err := Monitor.Wait(cmd)
+		if err != nil {
+			result <- err
+		} else if rc != 0 {
+			result <- fmt.Errorf("exec failed with rc %d", rc)
+		} else {
+			result <- nil
+		}
+	}()
+
+	select {
+	case <-ctx.Done():
+		if err := cmd.Process.Signal(syscall.SIGTERM); err != nil {
+			cancel()
+		}
+		return ctx.Err()
+	case err := <-result:
+		return err
+	}
 }
 
 // Run runs the create, start, delete lifecycle of the container
