@@ -160,6 +160,11 @@ type ExecOpts struct {
 	Detach        bool
 }
 
+// HasOutput returns whether the options has any valid output set
+func (o *ExecOpts) HasOutput() bool {
+	return o != nil && o.IO != nil && (o.IO.Stderr() != nil || o.IO.Stdout() != nil)
+}
+
 func (o *ExecOpts) args() (out []string, err error) {
 	if o.ConsoleSocket != nil {
 		out = append(out, "--console-socket", o.ConsoleSocket.Path())
@@ -177,8 +182,8 @@ func (o *ExecOpts) args() (out []string, err error) {
 	return out, nil
 }
 
-// Exec executres and additional process inside the container based on a full
-// OCI Process specification
+// Exec executes an additional process inside the container based on a full
+// OCI process specification
 func (r *Runc) Exec(ctx context.Context, id string, spec specs.Process, opts *ExecOpts) error {
 	f, err := ioutil.TempFile("", "runc-process")
 	if err != nil {
@@ -199,18 +204,19 @@ func (r *Runc) Exec(ctx context.Context, id string, spec specs.Process, opts *Ex
 		args = append(args, oargs...)
 	}
 
-	ctxKill, cancel := context.WithCancel(context.Background())
+	// cancel function kill is used to force kill the process if neccesary
+	ctxKill, kill := context.WithCancel(context.Background())
 	cmd := r.command(ctxKill, append(args, id)...)
-	if opts != nil && opts.IO != nil {
+
+	buf := bytes.NewBuffer(nil)
+
+	if opts.HasOutput() {
 		opts.Set(cmd)
+	} else {
+		cmd.Stdout = buf
+		cmd.Stderr = buf
 	}
-	if cmd.Stdout == nil && cmd.Stderr == nil {
-		data, err := Monitor.CombinedOutput(cmd)
-		if err != nil {
-			return fmt.Errorf("%s: %s", err, data)
-		}
-		return nil
-	}
+
 	if err := Monitor.Start(cmd); err != nil {
 		return err
 	}
@@ -229,20 +235,36 @@ func (r *Runc) Exec(ctx context.Context, id string, spec specs.Process, opts *Ex
 		if err != nil {
 			result <- err
 		} else if rc != 0 {
-			result <- fmt.Errorf("exec failed with rc %d", rc)
+			result <- fmt.Errorf("exec failed with exit code %d", rc)
 		} else {
 			result <- nil
 		}
 	}()
 
-	select {
-	case <-ctx.Done():
-		if err := cmd.Process.Signal(syscall.SIGTERM); err != nil {
-			cancel()
+	for {
+		select {
+		case <-ctx.Done():
+			if err := cmd.Process.Signal(syscall.SIGTERM); err != nil {
+				// If we failed to send SIGTERM, we cancel the
+				// context and let the exec package kill the
+				// process with os.Process.Kill
+				kill()
+			} else {
+				// After SIGTERM is sent, we check the process
+				// state after 5 seconds. If the process is not
+				// killed, we force kill it with SIGKILL
+				time.AfterFunc(5*time.Second, func() {
+					if !cmd.ProcessState.Exited() {
+						kill()
+					}
+				})
+			}
+		case err := <-result:
+			if !opts.HasOutput() && err != nil {
+				return fmt.Errorf("%s: %s", err, buf.String())
+			}
+			return err
 		}
-		return ctx.Err()
-	case err := <-result:
-		return err
 	}
 }
 
