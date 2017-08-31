@@ -41,7 +41,7 @@ type Runc struct {
 	PdeathSignal  syscall.Signal
 	Setpgid       bool
 	Criu          string
-	SystemdCgroup string
+	SystemdCgroup bool
 }
 
 // List returns all containers created inside the provided runc root directory
@@ -602,8 +602,8 @@ func (r *Runc) args() (out []string) {
 	if r.Criu != "" {
 		out = append(out, "--criu", r.Criu)
 	}
-	if r.SystemdCgroup != "" {
-		out = append(out, "--systemd-cgroup", r.SystemdCgroup)
+	if r.SystemdCgroup {
+		out = append(out, "--systemd-cgroup")
 	}
 	return out
 }
