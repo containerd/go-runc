@@ -3,14 +3,13 @@
 package runc
 
 import (
-	"context"
 	"os/exec"
 )
 
-func (r *Runc) command(context context.Context, args ...string) *exec.Cmd {
+func (r *Runc) command(args ...string) *exec.Cmd {
 	command := r.Command
 	if command == "" {
 		command = DefaultCommand
 	}
-	return exec.CommandContext(context, command, append(r.args(), args...)...)
+	return exec.Command(command, append(r.args(), args...)...)
 }
