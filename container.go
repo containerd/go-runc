@@ -1,3 +1,5 @@
+// run ffjson after changing fields in this file
+// > ffjson container.go
 package runc
 
 import "time"
