@@ -1,3 +1,5 @@
+// run ffjson after changing fields in this file
+// > ffjson events.go
 package runc
 
 type Event struct {
