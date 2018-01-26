@@ -2,7 +2,6 @@ package runc
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -15,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	jsoniter "github.com/json-iterator/go"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -49,6 +49,7 @@ func (r *Runc) List(context context.Context) ([]*Container, error) {
 	if err != nil {
 		return nil, err
 	}
+	json := jsoniter.ConfigCompatibleWithStandardLibrary
 	var out []*Container
 	if err := json.Unmarshal(data, &out); err != nil {
 		return nil, err
@@ -62,6 +63,7 @@ func (r *Runc) State(context context.Context, id string) (*Container, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s: %s", err, data)
 	}
+	json := jsoniter.ConfigCompatibleWithStandardLibrary
 	var c Container
 	if err := json.Unmarshal(data, &c); err != nil {
 		return nil, err
@@ -188,6 +190,7 @@ func (r *Runc) Exec(context context.Context, id string, spec specs.Process, opts
 		return err
 	}
 	defer os.Remove(f.Name())
+	json := jsoniter.ConfigCompatibleWithStandardLibrary
 	err = json.NewEncoder(f).Encode(spec)
 	f.Close()
 	if err != nil {
@@ -311,6 +314,7 @@ func (r *Runc) Stats(context context.Context, id string) (*Stats, error) {
 		Monitor.Wait(cmd, ec)
 	}()
 	var e Event
+	json := jsoniter.ConfigCompatibleWithStandardLibrary
 	if err := json.NewDecoder(rd).Decode(&e); err != nil {
 		return nil, err
 	}
@@ -329,6 +333,7 @@ func (r *Runc) Events(context context.Context, id string, interval time.Duration
 		rd.Close()
 		return nil, err
 	}
+	json := jsoniter.ConfigCompatibleWithStandardLibrary
 	var (
 		dec = json.NewDecoder(rd)
 		c   = make(chan *Event, 128)
@@ -372,6 +377,7 @@ func (r *Runc) Ps(context context.Context, id string) ([]int, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s: %s", err, data)
 	}
+	json := jsoniter.ConfigCompatibleWithStandardLibrary
 	var pids []int
 	if err := json.Unmarshal(data, &pids); err != nil {
 		return nil, err
@@ -534,6 +540,7 @@ func (r *Runc) Update(context context.Context, id string, resources *specs.Linux
 	buf := getBuf()
 	defer putBuf(buf)
 
+	json := jsoniter.ConfigCompatibleWithStandardLibrary
 	if err := json.NewEncoder(buf).Encode(resources); err != nil {
 		return err
 	}
