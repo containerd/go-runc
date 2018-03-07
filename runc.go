@@ -21,6 +21,15 @@ import (
 // Format is the type of log formatting options avaliable
 type Format string
 
+// TopBody represents the structured data of the full ps output
+type TopResults struct {
+	// Processes running in the container, where each is process is an array of values corresponding to the headers
+	Processes [][]string `json:"Processes"`
+
+	// Headers are the names of the columns
+	Headers []string `json:"Headers"`
+}
+
 const (
 	none Format = ""
 	JSON Format = "json"
@@ -377,6 +386,20 @@ func (r *Runc) Ps(context context.Context, id string) ([]int, error) {
 		return nil, err
 	}
 	return pids, nil
+}
+
+// Top lists all the processes inside the container returning the full ps data
+func (r *Runc) Top(context context.Context, id string, psOptions string) (*TopResults, error) {
+	data, err := cmdOutput(r.command(context, "ps", "--format", "table", id, psOptions), true)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %s", err, data)
+	}
+
+	topResults, err := parsePSOutput(data)
+	if err != nil {
+		return nil, fmt.Errorf("%s: ", err)
+	}
+	return topResults, nil
 }
 
 type CheckpointOpts struct {
