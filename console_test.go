@@ -17,19 +17,51 @@
 package runc
 
 import (
+	"errors"
 	"os"
 	"testing"
 )
 
 func TestTempConsole(t *testing.T) {
+	c, path := testSocketWithCorrectStickyBitMode(t, 0)
+	ensureSocketCleanup(t, c, path)
+}
+
+func TestTempConsoleWithXdgRuntimeDir(t *testing.T) {
+	tmpDir := "/tmp/foo"
+	if err := os.Setenv("XDG_RUNTIME_DIR", tmpDir); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(tmpDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	c, path := testSocketWithCorrectStickyBitMode(t, os.ModeSticky)
+	ensureSocketCleanup(t, c, path)
+
+	if err := os.RemoveAll(tmpDir); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func testSocketWithCorrectStickyBitMode(t *testing.T, expectedMode os.FileMode) (*Socket, string) {
 	c, err := NewTempConsoleSocket()
 	if err != nil {
 		t.Fatal(err)
 	}
 	path := c.Path()
-	if _, err := os.Stat(path); err != nil {
+	info, err := os.Stat(path)
+	if err != nil {
 		t.Fatal(err)
 	}
+
+	if (info.Mode() & os.ModeSticky) != expectedMode {
+		t.Fatal(errors.New("socket has incorrect mode"))
+	}
+	return c, path
+}
+
+func ensureSocketCleanup(t *testing.T, c *Socket, path string) {
 	if err := c.Close(); err != nil {
 		t.Fatal(err)
 	}
