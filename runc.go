@@ -411,7 +411,7 @@ func (r *Runc) Top(context context.Context, id string, psOptions string) (*TopRe
 		return nil, fmt.Errorf("%s: %s", err, data)
 	}
 
-	topResults, err := parsePSOutput(data)
+	topResults, err := ParsePSOutput(data)
 	if err != nil {
 		return nil, fmt.Errorf("%s: ", err)
 	}
