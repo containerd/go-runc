@@ -66,6 +66,7 @@ type Runc struct {
 	Setpgid       bool
 	Criu          string
 	SystemdCgroup bool
+	Rootless      *bool // nil stands for "auto"
 }
 
 // List returns all containers created inside the provided runc root directory
@@ -654,6 +655,10 @@ func (r *Runc) args() (out []string) {
 	}
 	if r.SystemdCgroup {
 		out = append(out, "--systemd-cgroup")
+	}
+	if r.Rootless != nil {
+		// nil stands for "auto" (differs from explicit "false")
+		out = append(out, "--rootless="+strconv.FormatBool(*r.Rootless))
 	}
 	return out
 }
