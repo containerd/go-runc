@@ -36,5 +36,4 @@ spec: 1.0.0-rc5-dev`
 	if v.Spec != "1.0.0-rc5-dev" {
 		t.Errorf("expected spec version 1.0.0-rc5-dev but received %s", v.Spec)
 	}
-
 }
