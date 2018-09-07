@@ -19,7 +19,7 @@
 package runc
 
 // NewPipeIO creates pipe pairs to be used with runc
-func NewPipeIO() (i IO, err error) {
+func NewPipeIO(opts ...IOOpt) (i IO, err error) {
 	option := defaultIOOption()
 	for _, o := range opts {
 		o(option)
@@ -27,7 +27,6 @@ func NewPipeIO() (i IO, err error) {
 	var (
 		pipes                 []*pipe
 		stdin, stdout, stderr *pipe
-		err                   error
 	)
 	// cleanup in case of an error
 	defer func() {
