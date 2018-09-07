@@ -20,7 +20,15 @@ package runc
 
 // NewPipeIO creates pipe pairs to be used with runc
 func NewPipeIO() (i IO, err error) {
-	var pipes []*pipe
+	option := defaultIOOption()
+	for _, o := range opts {
+		o(option)
+	}
+	var (
+		pipes                 []*pipe
+		stdin, stdout, stderr *pipe
+		err                   error
+	)
 	// cleanup in case of an error
 	defer func() {
 		if err != nil {
@@ -29,24 +37,24 @@ func NewPipeIO() (i IO, err error) {
 			}
 		}
 	}()
-	stdin, err := newPipe()
-	if err != nil {
-		return nil, err
+	if option.OpenStdin {
+		if stdin, err = newPipe(); err != nil {
+			return nil, err
+		}
+		pipes = append(pipes, stdin)
 	}
-	pipes = append(pipes, stdin)
-
-	stdout, err := newPipe()
-	if err != nil {
-		return nil, err
+	if option.OpenStdout {
+		if stdout, err = newPipe(); err != nil {
+			return nil, err
+		}
+		pipes = append(pipes, stdout)
 	}
-	pipes = append(pipes, stdout)
-
-	stderr, err := newPipe()
-	if err != nil {
-		return nil, err
+	if option.OpenStderr {
+		if stderr, err = newPipe(); err != nil {
+			return nil, err
+		}
+		pipes = append(pipes, stderr)
 	}
-	pipes = append(pipes, stderr)
-
 	return &pipeIO{
 		in:  stdin,
 		out: stdout,
