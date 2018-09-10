@@ -58,6 +58,7 @@ const (
 type Runc struct {
 	//If command is empty, DefaultCommand is used
 	Command       string
+	RuntimeArgs   []string
 	Root          string
 	Debug         bool
 	Log           string
@@ -637,6 +638,10 @@ func parseVersion(data []byte) (Version, error) {
 }
 
 func (r *Runc) args() (out []string) {
+	if len(r.RuntimeArgs) != 0 {
+		return r.RuntimeArgs
+	}
+
 	if r.Root != "" {
 		out = append(out, "--root", r.Root)
 	}
