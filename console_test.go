@@ -23,6 +23,10 @@ import (
 )
 
 func TestTempConsole(t *testing.T) {
+	if err := os.Setenv("XDG_RUNTIME_DIR", ""); err != nil {
+		t.Fatalf("failed to clear the XDG_RUNTIME_DIR env: %v", err)
+	}
+
 	c, path := testSocketWithCorrectStickyBitMode(t, 0)
 	ensureSocketCleanup(t, c, path)
 }
