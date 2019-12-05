@@ -16,7 +16,11 @@
 
 package runc
 
-import "testing"
+import (
+	"context"
+	"sync"
+	"testing"
+)
 
 func TestParseVersion(t *testing.T) {
 	const data = `runc version 1.0.0-rc3
@@ -36,4 +40,26 @@ spec: 1.0.0-rc5-dev`
 	if v.Spec != "1.0.0-rc5-dev" {
 		t.Errorf("expected spec version 1.0.0-rc5-dev but received %s", v.Spec)
 	}
+}
+
+func TestParallelCmds(t *testing.T) {
+	rc := &Runc{
+		// we don't need a real runc, we just want to test running a caller of cmdOutput in parallel
+		Command: "/bin/true",
+	}
+	var wg sync.WaitGroup
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	for i := 0; i < 256; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			// We just want to fail if there is a race condition detected by
+			// "-race", so we ignore the (expected) error here.
+			_, _ = rc.Version(ctx)
+		}()
+	}
+	wg.Wait()
 }
