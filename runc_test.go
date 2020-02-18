@@ -23,23 +23,64 @@ import (
 )
 
 func TestParseVersion(t *testing.T) {
-	const data = `runc version 1.0.0-rc3
-commit: 17f3e2a07439a024e54566774d597df9177ee216
-spec: 1.0.0-rc5-dev`
 
-	v, err := parseVersion([]byte(data))
-	if err != nil {
-		t.Fatal(err)
+	testParseVersion := func(t *testing.T, input string, expected Version) {
+		actual, err := parseVersion([]byte(input))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if expected != actual {
+			t.Fatalf("expected: %v, actual: %v", expected, actual)
+		}
 	}
-	if v.Runc != "1.0.0-rc3" {
-		t.Errorf("expected runc version 1.0.0-rc3 but received %s", v.Runc)
-	}
-	if v.Commit != "17f3e2a07439a024e54566774d597df9177ee216" {
-		t.Errorf("expected commit 17f3e2a07439a024e54566774d597df9177ee216 but received %s", v.Commit)
-	}
-	if v.Spec != "1.0.0-rc5-dev" {
-		t.Errorf("expected spec version 1.0.0-rc5-dev but received %s", v.Spec)
-	}
+
+	t.Run("Full", func(t *testing.T) {
+		input := `runc version 1.0.0-rc3
+commit: 17f3e2a07439a024e54566774d597df9177ee216
+spec: 1.0.0-rc5-dev
+`
+		expected := Version{
+			Runc:   "1.0.0-rc3",
+			Commit: "17f3e2a07439a024e54566774d597df9177ee216",
+			Spec:   "1.0.0-rc5-dev",
+		}
+		testParseVersion(t, input, expected)
+	})
+
+	t.Run("WithoutCommit", func(t *testing.T) {
+		input := `runc version 1.0.0-rc9
+spec: 1.0.1-dev
+`
+		expected := Version{
+			Runc:   "1.0.0-rc9",
+			Commit: "",
+			Spec:   "1.0.1-dev",
+		}
+		testParseVersion(t, input, expected)
+	})
+
+	t.Run("Oneline", func(t *testing.T) {
+		input := `runc version 1.0.0-rc8+dev
+`
+		expected := Version{
+			Runc:   "1.0.0-rc8+dev",
+			Commit: "",
+			Spec:   "",
+		}
+		testParseVersion(t, input, expected)
+	})
+
+	t.Run("Garbage", func(t *testing.T) {
+		input := `Garbage
+spec: nope
+`
+		expected := Version{
+			Runc:   "",
+			Commit: "",
+			Spec:   "",
+		}
+		testParseVersion(t, input, expected)
+	})
 }
 
 func TestParallelCmds(t *testing.T) {
