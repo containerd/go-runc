@@ -29,10 +29,10 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	specs "github.com/opencontainers/runtime-spec/specs-go"
+	"golang.org/x/sys/unix"
 )
 
 // Format is the type of log formatting options avaliable
@@ -63,7 +63,7 @@ type Runc struct {
 	Debug         bool
 	Log           string
 	LogFormat     Format
-	PdeathSignal  syscall.Signal
+	PdeathSignal  unix.Signal
 	Setpgid       bool
 	Criu          string
 	SystemdCgroup bool
