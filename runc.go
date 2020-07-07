@@ -452,6 +452,10 @@ type CheckpointOpts struct {
 	// EmptyNamespaces creates a namespace for the container but does not save its properties
 	// Provide the namespaces you wish to be checkpointed without their settings on restore
 	EmptyNamespaces []string
+	// LazyPages uses userfaultfd to lazily restore memory pages
+	LazyPages bool
+	// StatusFile is the file criu writes \0 to once lazy-pages is ready
+	StatusFile *os.File
 }
 
 type CgroupMode string
@@ -493,6 +497,9 @@ func (o *CheckpointOpts) args() (out []string) {
 	for _, ns := range o.EmptyNamespaces {
 		out = append(out, "--empty-ns", ns)
 	}
+	if o.LazyPages {
+		out = append(out, "--lazy-pages")
+	}
 	return out
 }
 
@@ -511,13 +518,23 @@ func PreDump(args []string) []string {
 // Checkpoint allows you to checkpoint a container using criu
 func (r *Runc) Checkpoint(context context.Context, id string, opts *CheckpointOpts, actions ...CheckpointAction) error {
 	args := []string{"checkpoint"}
+	extraFiles := []*os.File{}
 	if opts != nil {
 		args = append(args, opts.args()...)
+		if opts.StatusFile != nil {
+			// pass the status file to the child process
+			extraFiles = []*os.File{opts.StatusFile}
+			// set status-fd to 3 as this will be the file descriptor
+			// of the first file passed with cmd.ExtraFiles
+			args = append(args, "--status-fd", "3")
+		}
 	}
 	for _, a := range actions {
 		args = a(args)
 	}
-	return r.runOrError(r.command(context, append(args, id)...))
+	cmd := r.command(context, append(args, id)...)
+	cmd.ExtraFiles = extraFiles
+	return r.runOrError(cmd)
 }
 
 type RestoreOpts struct {
