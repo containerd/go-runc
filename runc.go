@@ -32,7 +32,6 @@ import (
 	"time"
 
 	specs "github.com/opencontainers/runtime-spec/specs-go"
-	"golang.org/x/sys/unix"
 )
 
 // Format is the type of log formatting options avaliable
@@ -54,21 +53,6 @@ const (
 	// DefaultCommand is the default command for Runc
 	DefaultCommand = "runc"
 )
-
-// Runc is the client to the runc cli
-type Runc struct {
-	//If command is empty, DefaultCommand is used
-	Command       string
-	Root          string
-	Debug         bool
-	Log           string
-	LogFormat     Format
-	PdeathSignal  unix.Signal
-	Setpgid       bool
-	Criu          string
-	SystemdCgroup bool
-	Rootless      *bool // nil stands for "auto"
-}
 
 // List returns all containers created inside the provided runc root directory
 func (r *Runc) List(context context.Context) ([]*Container, error) {
