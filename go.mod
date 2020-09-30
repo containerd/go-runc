@@ -6,6 +6,6 @@ require (
 	github.com/containerd/console v1.0.1
 	github.com/opencontainers/runtime-spec v1.0.1
 	github.com/pkg/errors v0.9.1
-	github.com/sirupsen/logrus v1.6.0
+	github.com/sirupsen/logrus v1.7.0
 	golang.org/x/sys v0.0.0-20200916030750-2334cc1a136f
 )
