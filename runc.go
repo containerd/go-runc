@@ -160,7 +160,7 @@ func (r *Runc) Create(context context.Context, id, bundle string, opts *CreateOp
 	}
 	status, err := Monitor.Wait(cmd, ec)
 	if err == nil && status != 0 {
-		err = fmt.Errorf("%s did not terminate successfully", cmd.Args[0])
+		err = fmt.Errorf("%s did not terminate successfully: %w", cmd.Args[0], &ExitError{status})
 	}
 	return err
 }
@@ -194,7 +194,7 @@ func (o *ExecOpts) args() (out []string, err error) {
 	return out, nil
 }
 
-// Exec executres and additional process inside the container based on a full
+// Exec executes an additional process inside the container based on a full
 // OCI Process specification
 func (r *Runc) Exec(context context.Context, id string, spec specs.Process, opts *ExecOpts) error {
 	f, err := ioutil.TempFile(os.Getenv("XDG_RUNTIME_DIR"), "runc-process")
@@ -223,7 +223,7 @@ func (r *Runc) Exec(context context.Context, id string, spec specs.Process, opts
 		data, err := cmdOutput(cmd, true)
 		defer putBuf(data)
 		if err != nil {
-			return fmt.Errorf("%s: %s", err, data.String())
+			return fmt.Errorf("%w: %s", err, data.String())
 		}
 		return nil
 	}
@@ -240,7 +240,7 @@ func (r *Runc) Exec(context context.Context, id string, spec specs.Process, opts
 	}
 	status, err := Monitor.Wait(cmd, ec)
 	if err == nil && status != 0 {
-		err = fmt.Errorf("%s did not terminate successfully", cmd.Args[0])
+		err = fmt.Errorf("%s did not terminate successfully: %w", cmd.Args[0], &ExitError{status})
 	}
 	return err
 }
@@ -266,7 +266,7 @@ func (r *Runc) Run(context context.Context, id, bundle string, opts *CreateOpts)
 	}
 	status, err := Monitor.Wait(cmd, ec)
 	if err == nil && status != 0 {
-		err = fmt.Errorf("%s did not terminate successfully", cmd.Args[0])
+		err = fmt.Errorf("%s did not terminate successfully: %w", cmd.Args[0], &ExitError{status})
 	}
 	return status, err
 }
@@ -584,7 +584,7 @@ func (r *Runc) Restore(context context.Context, id, bundle string, opts *Restore
 	}
 	status, err := Monitor.Wait(cmd, ec)
 	if err == nil && status != 0 {
-		err = fmt.Errorf("%s did not terminate successfully", cmd.Args[0])
+		err = fmt.Errorf("%s did not terminate successfully: %w", cmd.Args[0], &ExitError{status})
 	}
 	return status, err
 }
@@ -681,7 +681,7 @@ func (r *Runc) runOrError(cmd *exec.Cmd) error {
 		}
 		status, err := Monitor.Wait(cmd, ec)
 		if err == nil && status != 0 {
-			err = fmt.Errorf("%s did not terminate successfully", cmd.Args[0])
+			err = fmt.Errorf("%s did not terminate successfully: %w", cmd.Args[0], &ExitError{status})
 		}
 		return err
 	}
@@ -709,8 +709,16 @@ func cmdOutput(cmd *exec.Cmd, combined bool) (*bytes.Buffer, error) {
 
 	status, err := Monitor.Wait(cmd, ec)
 	if err == nil && status != 0 {
-		err = fmt.Errorf("%s did not terminate successfully", cmd.Args[0])
+		err = fmt.Errorf("%s did not terminate successfully: %w", cmd.Args[0], &ExitError{status})
 	}
 
 	return b, err
+}
+
+type ExitError struct {
+	Status int
+}
+
+func (e *ExitError) Error() string {
+	return fmt.Sprintf("exit status %d", e.Status)
 }

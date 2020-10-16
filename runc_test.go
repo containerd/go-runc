@@ -18,8 +18,11 @@ package runc
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"testing"
+
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
 func TestParseVersion(t *testing.T) {
@@ -103,4 +106,89 @@ func TestParallelCmds(t *testing.T) {
 		}()
 	}
 	wg.Wait()
+}
+
+func TestRuncRunExit(t *testing.T) {
+	ctx := context.Background()
+	okRunc := &Runc{
+		Command: "/bin/true",
+	}
+
+	status, err := okRunc.Run(ctx, "fake-id", "fake-bundle", &CreateOpts{})
+	if err != nil {
+		t.Fatalf("Unexpected error from Run: %s", err)
+	}
+	if status != 0 {
+		t.Fatalf("Expected exit status 0 from Run, got %d", status)
+	}
+
+	failRunc := &Runc{
+		Command: "/bin/false",
+	}
+
+	status, err = failRunc.Run(ctx, "fake-id", "fake-bundle", &CreateOpts{})
+	if err == nil {
+		t.Fatal("Expected error from Run, but got nil")
+	}
+	if status != 1 {
+		t.Fatalf("Expected exit status 1 from Run, got %d", status)
+	}
+	extractedStatus := extractStatus(err)
+	if extractedStatus != status {
+		t.Fatalf("Expected extracted exit status %d from Run, got %d", status, extractedStatus)
+	}
+}
+
+func TestRuncExecExit(t *testing.T) {
+	ctx := context.Background()
+	okRunc := &Runc{
+		Command: "/bin/true",
+	}
+	err := okRunc.Exec(ctx, "fake-id", specs.Process{}, &ExecOpts{})
+	if err != nil {
+		t.Fatalf("Unexpected error from Exec: %s", err)
+	}
+	status := extractStatus(err)
+	if status != 0 {
+		t.Fatalf("Expected exit status 0 from Exec, got %d", status)
+	}
+
+	failRunc := &Runc{
+		Command: "/bin/false",
+	}
+
+	err = failRunc.Exec(ctx, "fake-id", specs.Process{}, &ExecOpts{})
+	if err == nil {
+		t.Fatal("Expected error from Exec, but got nil")
+	}
+	status = extractStatus(err)
+	if status != 1 {
+		t.Fatalf("Expected exit status 1 from Exec, got %d", status)
+	}
+
+	io, err := NewSTDIO()
+	if err != nil {
+		t.Fatalf("Unexpected error from NewSTDIO: %s", err)
+	}
+	err = failRunc.Exec(ctx, "fake-id", specs.Process{}, &ExecOpts{
+		IO: io,
+	})
+	if err == nil {
+		t.Fatal("Expected error from Exec, but got nil")
+	}
+	status = extractStatus(err)
+	if status != 1 {
+		t.Fatalf("Expected exit status 1 from Exec, got %d", status)
+	}
+}
+
+func extractStatus(err error) int {
+	if err == nil {
+		return 0
+	}
+	var exitError *ExitError
+	if errors.As(err, &exitError) {
+		return exitError.Status
+	}
+	return -1
 }
