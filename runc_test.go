@@ -19,8 +19,12 @@ package runc
 import (
 	"context"
 	"errors"
+	"io/ioutil"
+	"os"
 	"sync"
+	"syscall"
 	"testing"
+	"time"
 
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
@@ -182,6 +186,78 @@ func TestRuncExecExit(t *testing.T) {
 	}
 }
 
+func TestRuncStarted(t *testing.T) {
+	ctx, timeout := context.WithTimeout(context.Background(), 10*time.Second)
+	defer timeout()
+
+	dummyCommand, err := dummySleepRunc()
+	if err != nil {
+		t.Fatalf("Failed to create dummy sleep runc: %s", err)
+	}
+	defer os.Remove(dummyCommand)
+	sleepRunc := &Runc{
+		Command: dummyCommand,
+	}
+
+	var wg sync.WaitGroup
+	defer wg.Wait()
+
+	started := make(chan int)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		interrupt(ctx, t, started)
+	}()
+	status, err := sleepRunc.Run(ctx, "fake-id", "fake-bundle", &CreateOpts{
+		Started: started,
+	})
+	if err == nil {
+		t.Fatal("Expected error from Run, but got nil")
+	}
+	if status != -1 {
+		t.Fatalf("Expected exit status 0 from Run, got %d", status)
+	}
+
+	started = make(chan int)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		interrupt(ctx, t, started)
+	}()
+	err = sleepRunc.Exec(ctx, "fake-id", specs.Process{}, &ExecOpts{
+		Started: started,
+	})
+	if err == nil {
+		t.Fatal("Expected error from Exec, but got nil")
+	}
+	status = extractStatus(err)
+	if status != -1 {
+		t.Fatalf("Expected exit status -1 from Exec, got %d", status)
+	}
+
+	started = make(chan int)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		interrupt(ctx, t, started)
+	}()
+	io, err := NewSTDIO()
+	if err != nil {
+		t.Fatalf("Unexpected error from NewSTDIO: %s", err)
+	}
+	err = sleepRunc.Exec(ctx, "fake-id", specs.Process{}, &ExecOpts{
+		IO:      io,
+		Started: started,
+	})
+	if err == nil {
+		t.Fatal("Expected error from Exec, but got nil")
+	}
+	status = extractStatus(err)
+	if status != -1 {
+		t.Fatalf("Expected exit status 1 from Exec, got %d", status)
+	}
+}
+
 func extractStatus(err error) int {
 	if err == nil {
 		return 0
@@ -191,4 +267,50 @@ func extractStatus(err error) int {
 		return exitError.Status
 	}
 	return -1
+}
+
+// interrupt waits for the pid over the started channel then sends a
+// SIGINT to the process.
+func interrupt(ctx context.Context, t *testing.T, started <-chan int) {
+	select {
+	case <-ctx.Done():
+		t.Fatal("Timed out waiting for started message")
+	case pid, ok := <-started:
+		if !ok {
+			t.Fatal("Started channel closed without sending pid")
+		}
+		process, _ := os.FindProcess(pid)
+		defer process.Release()
+		err := process.Signal(syscall.SIGINT)
+		if err != nil {
+			t.Fatalf("Failed to send SIGINT to %d: %s", pid, err)
+		}
+	}
+}
+
+// dummySleepRunc creates s simple script that just runs `sleep 10` to replace
+// runc for testing process that are longer running.
+func dummySleepRunc() (_ string, err error) {
+	fh, err := ioutil.TempFile("", "*.sh")
+	if err != nil {
+		return "", err
+	}
+	defer func() {
+		if err != nil {
+			os.Remove(fh.Name())
+		}
+	}()
+	_, err = fh.Write([]byte("#!/bin/sh\nexec /bin/sleep 10"))
+	if err != nil {
+		return "", err
+	}
+	err = fh.Close()
+	if err != nil {
+		return "", err
+	}
+	err = os.Chmod(fh.Name(), 0755)
+	if err != nil {
+		return "", err
+	}
+	return fh.Name(), nil
 }
