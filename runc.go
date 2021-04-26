@@ -34,10 +34,10 @@ import (
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
-// Format is the type of log formatting options avaliable
+// Format is the type of log formatting options available
 type Format string
 
-// TopBody represents the structured data of the full ps output
+// TopResults represents the structured data of the full ps output
 type TopResults struct {
 	// Processes running in the container, where each is process is an array of values corresponding to the headers
 	Processes [][]string `json:"Processes"`
@@ -48,7 +48,9 @@ type TopResults struct {
 
 const (
 	none Format = ""
+	// JSON represents the JSON format
 	JSON Format = "json"
+	// Text represents plain text format
 	Text Format = "text"
 	// DefaultCommand is the default command for Runc
 	DefaultCommand = "runc"
@@ -82,10 +84,12 @@ func (r *Runc) State(context context.Context, id string) (*Container, error) {
 	return &c, nil
 }
 
+// ConsoleSocket handles the path of the socket for console access
 type ConsoleSocket interface {
 	Path() string
 }
 
+// CreateOpts holds all the options information for calling runc with supported options
 type CreateOpts struct {
 	IO
 	// PidFile is a path to where a pid file should be created
@@ -171,6 +175,7 @@ func (r *Runc) Start(context context.Context, id string) error {
 	return r.runOrError(r.command(context, "start", id))
 }
 
+// ExecOpts holds optional settings when starting an exec process with runc
 type ExecOpts struct {
 	IO
 	PidFile       string
@@ -285,6 +290,7 @@ func (r *Runc) Run(context context.Context, id, bundle string, opts *CreateOpts)
 	return status, err
 }
 
+// DeleteOpts holds the deletion options for calling `runc delete`
 type DeleteOpts struct {
 	Force bool
 }
@@ -428,6 +434,7 @@ func (r *Runc) Top(context context.Context, id string, psOptions string) (*TopRe
 	return topResults, nil
 }
 
+// CheckpointOpts holds the options for performing a criu checkpoint using runc
 type CheckpointOpts struct {
 	// ImagePath is the path for saving the criu image file
 	ImagePath string
@@ -456,11 +463,15 @@ type CheckpointOpts struct {
 	StatusFile *os.File
 }
 
+// CgroupMode defines the cgroup mode used for checkpointing
 type CgroupMode string
 
 const (
-	Soft   CgroupMode = "soft"
-	Full   CgroupMode = "full"
+	// Soft is the "soft" cgroup mode
+	Soft CgroupMode = "soft"
+	// Full is the "full" cgroup mode
+	Full CgroupMode = "full"
+	// Strict is the "strict" cgroup mode
 	Strict CgroupMode = "strict"
 )
 
@@ -501,6 +512,7 @@ func (o *CheckpointOpts) args() (out []string) {
 	return out
 }
 
+// CheckpointAction represents specific actions executed during checkpoint/restore
 type CheckpointAction func([]string) []string
 
 // LeaveRunning keeps the container running after the checkpoint has been completed
@@ -535,6 +547,7 @@ func (r *Runc) Checkpoint(context context.Context, id string, opts *CheckpointOp
 	return r.runOrError(cmd)
 }
 
+// RestoreOpts holds the options for performing a criu restore using runc
 type RestoreOpts struct {
 	CheckpointOpts
 	IO
@@ -617,8 +630,10 @@ func (r *Runc) Update(context context.Context, id string, resources *specs.Linux
 	return r.runOrError(cmd)
 }
 
+// ErrParseRuncVersion is used when the runc version can't be parsed
 var ErrParseRuncVersion = errors.New("unable to parse runc version")
 
+// Version represents the runc version information
 type Version struct {
 	Runc   string
 	Commit string
@@ -732,6 +747,7 @@ func cmdOutput(cmd *exec.Cmd, combined bool, started chan<- int) (*bytes.Buffer,
 	return b, err
 }
 
+// ExitError holds the status return code when a process exits with an error code
 type ExitError struct {
 	Status int
 }

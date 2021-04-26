@@ -22,8 +22,10 @@ import (
 	"time"
 )
 
+// Monitor is the default ProcessMonitor for handling runc process exit
 var Monitor ProcessMonitor = &defaultMonitor{}
 
+// Exit holds the exit information from a process
 type Exit struct {
 	Timestamp time.Time
 	Pid       int
