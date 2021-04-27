@@ -1,6 +1,6 @@
 # go-runc
 
-[![Build Status](https://travis-ci.org/containerd/go-runc.svg?branch=master)](https://travis-ci.org/containerd/go-runc)
+[![Build Status](https://github.com/containerd/go-runc/workflows/CI/badge.svg)](https://github.com/containerd/go-runc/actions?query=workflow%3ACI)
 [![codecov](https://codecov.io/gh/containerd/go-runc/branch/master/graph/badge.svg)](https://codecov.io/gh/containerd/go-runc)
 
 This is a package for consuming the [runc](https://github.com/opencontainers/runc) binary in your Go applications.
