@@ -19,10 +19,11 @@
 package runc
 
 import (
+	"runtime"
+
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
-	"runtime"
 )
 
 // NewPipeIO creates pipe pairs to be used with runc

@@ -22,6 +22,7 @@ import (
 	"os/exec"
 )
 
+// IO is the terminal IO interface
 type IO interface {
 	io.Closer
 	Stdin() io.WriteCloser
@@ -30,6 +31,7 @@ type IO interface {
 	Set(*exec.Cmd)
 }
 
+// StartCloser is an interface to handle IO closure after start
 type StartCloser interface {
 	CloseAfterStart() error
 }
@@ -144,6 +146,7 @@ func (i *pipeIO) Set(cmd *exec.Cmd) {
 	}
 }
 
+// NewSTDIO returns I/O setup for standard OS in/out/err usage
 func NewSTDIO() (IO, error) {
 	return &stdio{}, nil
 }

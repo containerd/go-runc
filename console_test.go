@@ -33,7 +33,7 @@ func TestTempConsole(t *testing.T) {
 
 func TestTempConsoleWithXdgRuntimeDir(t *testing.T) {
 	tmpDir := "/tmp/foo"
-	// prevent interferring with other tests
+	// prevent interfering with other tests
 	defer os.Setenv("XDG_RUNTIME_DIR", os.Getenv("XDG_RUNTIME_DIR"))
 	if err := os.Setenv("XDG_RUNTIME_DIR", tmpDir); err != nil {
 		t.Fatal(err)
