@@ -100,6 +100,7 @@ type CreateOpts struct {
 	NoNewKeyring  bool
 	ExtraFiles    []*os.File
 	Started       chan<- int
+	ExtraArgs     []string
 }
 
 func (o *CreateOpts) args() (out []string, err error) {
@@ -124,6 +125,9 @@ func (o *CreateOpts) args() (out []string, err error) {
 	}
 	if o.ExtraFiles != nil {
 		out = append(out, "--preserve-fds", strconv.Itoa(len(o.ExtraFiles)))
+	}
+	if len(o.ExtraArgs) > 0 {
+		out = append(out, o.ExtraArgs...)
 	}
 	return out, nil
 }
@@ -182,6 +186,7 @@ type ExecOpts struct {
 	ConsoleSocket ConsoleSocket
 	Detach        bool
 	Started       chan<- int
+	ExtraArgs     []string
 }
 
 func (o *ExecOpts) args() (out []string, err error) {
@@ -197,6 +202,9 @@ func (o *ExecOpts) args() (out []string, err error) {
 			return nil, err
 		}
 		out = append(out, "--pid-file", abs)
+	}
+	if len(o.ExtraArgs) > 0 {
+		out = append(out, o.ExtraArgs...)
 	}
 	return out, nil
 }
@@ -292,12 +300,16 @@ func (r *Runc) Run(context context.Context, id, bundle string, opts *CreateOpts)
 
 // DeleteOpts holds the deletion options for calling `runc delete`
 type DeleteOpts struct {
-	Force bool
+	Force     bool
+	ExtraArgs []string
 }
 
 func (o *DeleteOpts) args() (out []string) {
 	if o.Force {
 		out = append(out, "--force")
+	}
+	if len(o.ExtraArgs) > 0 {
+		out = append(out, o.ExtraArgs...)
 	}
 	return out
 }
@@ -313,12 +325,16 @@ func (r *Runc) Delete(context context.Context, id string, opts *DeleteOpts) erro
 
 // KillOpts specifies options for killing a container and its processes
 type KillOpts struct {
-	All bool
+	All       bool
+	ExtraArgs []string
 }
 
 func (o *KillOpts) args() (out []string) {
 	if o.All {
 		out = append(out, "--all")
+	}
+	if len(o.ExtraArgs) > 0 {
+		out = append(out, o.ExtraArgs...)
 	}
 	return out
 }
@@ -461,6 +477,7 @@ type CheckpointOpts struct {
 	LazyPages bool
 	// StatusFile is the file criu writes \0 to once lazy-pages is ready
 	StatusFile *os.File
+	ExtraArgs  []string
 }
 
 // CgroupMode defines the cgroup mode used for checkpointing
@@ -508,6 +525,9 @@ func (o *CheckpointOpts) args() (out []string) {
 	}
 	if o.LazyPages {
 		out = append(out, "--lazy-pages")
+	}
+	if len(o.ExtraArgs) > 0 {
+		out = append(out, o.ExtraArgs...)
 	}
 	return out
 }
@@ -557,6 +577,7 @@ type RestoreOpts struct {
 	NoSubreaper   bool
 	NoPivot       bool
 	ConsoleSocket ConsoleSocket
+	ExtraArgs     []string
 }
 
 func (o *RestoreOpts) args() ([]string, error) {
@@ -579,6 +600,9 @@ func (o *RestoreOpts) args() ([]string, error) {
 	}
 	if o.NoSubreaper {
 		out = append(out, "-no-subreaper")
+	}
+	if len(o.ExtraArgs) > 0 {
+		out = append(out, o.ExtraArgs...)
 	}
 	return out, nil
 }
@@ -694,6 +718,9 @@ func (r *Runc) args() (out []string) {
 	if r.Rootless != nil {
 		// nil stands for "auto" (differs from explicit "false")
 		out = append(out, "--rootless="+strconv.FormatBool(*r.Rootless))
+	}
+	if len(r.ExtraArgs) > 0 {
+		out = append(out, r.ExtraArgs...)
 	}
 	return out
 }

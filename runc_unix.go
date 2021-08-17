@@ -35,4 +35,5 @@ type Runc struct {
 	Criu          string
 	SystemdCgroup bool
 	Rootless      *bool // nil stands for "auto"
+	ExtraArgs     []string
 }

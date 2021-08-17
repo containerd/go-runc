@@ -30,7 +30,6 @@ import (
 )
 
 func TestParseVersion(t *testing.T) {
-
 	testParseVersion := func(t *testing.T, input string, expected Version) {
 		actual, err := parseVersion([]byte(input))
 		if err != nil {
@@ -313,4 +312,27 @@ func dummySleepRunc() (_ string, err error) {
 		return "", err
 	}
 	return fh.Name(), nil
+}
+
+func TestCreateArgs(t *testing.T) {
+	o := &CreateOpts{}
+	args, err := o.args()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(args) != 0 {
+		t.Fatal("args should be empty")
+	}
+	o.ExtraArgs = []string{"--other"}
+	args, err = o.args()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(args) != 1 {
+		t.Fatal("args should have 1 arg")
+	}
+	if a := args[0]; a != "--other" {
+		t.Fatalf("arg should be --other but got %q", a)
+	}
+
 }
