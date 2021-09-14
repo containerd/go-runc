@@ -327,6 +327,7 @@ func (r *Runc) Delete(context context.Context, id string, opts *DeleteOpts) erro
 type KillOpts struct {
 	All       bool
 	ExtraArgs []string
+	RawSignal string
 }
 
 func (o *KillOpts) args() (out []string) {
@@ -344,10 +345,14 @@ func (r *Runc) Kill(context context.Context, id string, sig int, opts *KillOpts)
 	args := []string{
 		"kill",
 	}
+	killSignal := strconv.Itoa(sig)
 	if opts != nil {
 		args = append(args, opts.args()...)
+		if opts.RawSignal != "" {
+			killSignal = opts.RawSignal
+		}
 	}
-	return r.runOrError(r.command(context, append(args, id, strconv.Itoa(sig))...))
+	return r.runOrError(r.command(context, append(args, id, killSignal)...))
 }
 
 // Stats return the stats for a container like cpu, memory, and io
