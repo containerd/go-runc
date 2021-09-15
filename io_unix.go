@@ -26,8 +26,8 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// NewPipeIO creates pipe pairs to be used with runc
-func NewPipeIO(uid, gid int, opts ...IOOpt) (i IO, err error) {
+// newPipeIO creates pipe pairs to be used with runc
+func newPipeIO(uid, gid int, opts ...IOOpt) (i IO, err error) {
 	option := defaultIOOption()
 	for _, o := range opts {
 		o(option)
