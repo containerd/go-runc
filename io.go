@@ -78,6 +78,12 @@ func (p *pipe) Close() error {
 	return err
 }
 
+// NewPipeIO creates pipe pairs to be used with runc. It is not implemented
+// on Windows.
+func NewPipeIO(uid, gid int, opts ...IOOpt) (i IO, err error) {
+	return newPipeIO(uid, gid, opts...)
+}
+
 type pipeIO struct {
 	in  *pipe
 	out *pipe

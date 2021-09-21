@@ -29,6 +29,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	specs "github.com/opencontainers/runtime-spec/specs-go"
@@ -55,6 +56,23 @@ const (
 	// DefaultCommand is the default command for Runc
 	DefaultCommand = "runc"
 )
+
+// Runc is the client to the runc cli
+type Runc struct {
+	// Command overrides the name of the runc binary. If empty, DefaultCommand
+	// is used.
+	Command       string
+	Root          string
+	Debug         bool
+	Log           string
+	LogFormat     Format
+	PdeathSignal  syscall.Signal // using syscall.Signal to allow compilation on non-unix (unix.Syscall is an alias for syscall.Signal)
+	Setpgid       bool
+	Criu          string
+	SystemdCgroup bool
+	Rootless      *bool // nil stands for "auto"
+	ExtraArgs     []string
+}
 
 // List returns all containers created inside the provided runc root directory
 func (r *Runc) List(context context.Context) ([]*Container, error) {
