@@ -1,11 +1,10 @@
 module github.com/containerd/go-runc
 
-go 1.13
+go 1.16
 
 require (
-	github.com/containerd/console v1.0.1
-	github.com/opencontainers/runtime-spec v1.0.2
-	github.com/pkg/errors v0.9.1
-	github.com/sirupsen/logrus v1.7.0
-	golang.org/x/sys v0.0.0-20200916030750-2334cc1a136f
+	github.com/containerd/console v1.0.3
+	github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417
+	github.com/sirupsen/logrus v1.8.1
+	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c
 )
