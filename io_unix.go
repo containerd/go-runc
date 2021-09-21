@@ -19,9 +19,9 @@
 package runc
 
 import (
+	"fmt"
 	"runtime"
 
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
@@ -55,7 +55,7 @@ func NewPipeIO(uid, gid int, opts ...IOOpt) (i IO, err error) {
 			if runtime.GOOS == "darwin" {
 				logrus.WithError(err).Debug("failed to chown stdin, ignored")
 			} else {
-				return nil, errors.Wrap(err, "failed to chown stdin")
+				return nil, fmt.Errorf("failed to chown stdin: %w", err)
 			}
 		}
 	}
@@ -70,7 +70,7 @@ func NewPipeIO(uid, gid int, opts ...IOOpt) (i IO, err error) {
 			if runtime.GOOS == "darwin" {
 				logrus.WithError(err).Debug("failed to chown stdout, ignored")
 			} else {
-				return nil, errors.Wrap(err, "failed to chown stdout")
+				return nil, fmt.Errorf("failed to chown stdout: %w", err)
 			}
 		}
 	}
@@ -85,7 +85,7 @@ func NewPipeIO(uid, gid int, opts ...IOOpt) (i IO, err error) {
 			if runtime.GOOS == "darwin" {
 				logrus.WithError(err).Debug("failed to chown stderr, ignored")
 			} else {
-				return nil, errors.Wrap(err, "failed to chown stderr")
+				return nil, fmt.Errorf("failed to chown stderr: %w", err)
 			}
 		}
 	}
