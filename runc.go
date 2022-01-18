@@ -153,15 +153,17 @@ func (o *CreateOpts) args() (out []string, err error) {
 // Create creates a new container and returns its pid if it was created successfully
 func (r *Runc) Create(context context.Context, id, bundle string, opts *CreateOpts) error {
 	args := []string{"create", "--bundle", bundle}
-	if opts != nil {
-		oargs, err := opts.args()
-		if err != nil {
-			return err
-		}
-		args = append(args, oargs...)
+	if opts == nil {
+		opts = &CreateOpts{}
 	}
+
+	oargs, err := opts.args()
+	if err != nil {
+		return err
+	}
+	args = append(args, oargs...)
 	cmd := r.command(context, append(args, id)...)
-	if opts != nil && opts.IO != nil {
+	if opts.IO != nil {
 		opts.Set(cmd)
 	}
 	cmd.ExtraFiles = opts.ExtraFiles
@@ -178,7 +180,7 @@ func (r *Runc) Create(context context.Context, id, bundle string, opts *CreateOp
 	if err != nil {
 		return err
 	}
-	if opts != nil && opts.IO != nil {
+	if opts.IO != nil {
 		if c, ok := opts.IO.(StartCloser); ok {
 			if err := c.CloseAfterStart(); err != nil {
 				return err
@@ -230,6 +232,9 @@ func (o *ExecOpts) args() (out []string, err error) {
 // Exec executes an additional process inside the container based on a full
 // OCI Process specification
 func (r *Runc) Exec(context context.Context, id string, spec specs.Process, opts *ExecOpts) error {
+	if opts == nil {
+		opts = &ExecOpts{}
+	}
 	if opts.Started != nil {
 		defer close(opts.Started)
 	}
@@ -244,15 +249,13 @@ func (r *Runc) Exec(context context.Context, id string, spec specs.Process, opts
 		return err
 	}
 	args := []string{"exec", "--process", f.Name()}
-	if opts != nil {
-		oargs, err := opts.args()
-		if err != nil {
-			return err
-		}
-		args = append(args, oargs...)
+	oargs, err := opts.args()
+	if err != nil {
+		return err
 	}
+	args = append(args, oargs...)
 	cmd := r.command(context, append(args, id)...)
-	if opts != nil && opts.IO != nil {
+	if opts.IO != nil {
 		opts.Set(cmd)
 	}
 	if cmd.Stdout == nil && cmd.Stderr == nil {
@@ -270,7 +273,7 @@ func (r *Runc) Exec(context context.Context, id string, spec specs.Process, opts
 	if opts.Started != nil {
 		opts.Started <- cmd.Process.Pid
 	}
-	if opts != nil && opts.IO != nil {
+	if opts.IO != nil {
 		if c, ok := opts.IO.(StartCloser); ok {
 			if err := c.CloseAfterStart(); err != nil {
 				return err
@@ -287,19 +290,20 @@ func (r *Runc) Exec(context context.Context, id string, spec specs.Process, opts
 // Run runs the create, start, delete lifecycle of the container
 // and returns its exit status after it has exited
 func (r *Runc) Run(context context.Context, id, bundle string, opts *CreateOpts) (int, error) {
+	if opts == nil {
+		opts = &CreateOpts{}
+	}
 	if opts.Started != nil {
 		defer close(opts.Started)
 	}
 	args := []string{"run", "--bundle", bundle}
-	if opts != nil {
-		oargs, err := opts.args()
-		if err != nil {
-			return -1, err
-		}
-		args = append(args, oargs...)
+	oargs, err := opts.args()
+	if err != nil {
+		return -1, err
 	}
+	args = append(args, oargs...)
 	cmd := r.command(context, append(args, id)...)
-	if opts != nil && opts.IO != nil {
+	if opts.IO != nil {
 		opts.Set(cmd)
 	}
 	ec, err := Monitor.Start(cmd)
