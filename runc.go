@@ -61,13 +61,20 @@ const (
 type Runc struct {
 	// Command overrides the name of the runc binary. If empty, DefaultCommand
 	// is used.
-	Command       string
-	Root          string
-	Debug         bool
-	Log           string
-	LogFormat     Format
-	PdeathSignal  syscall.Signal // using syscall.Signal to allow compilation on non-unix (unix.Syscall is an alias for syscall.Signal)
-	Setpgid       bool
+	Command      string
+	Root         string
+	Debug        bool
+	Log          string
+	LogFormat    Format
+	PdeathSignal syscall.Signal // using syscall.Signal to allow compilation on non-unix (unix.Syscall is an alias for syscall.Signal)
+	Setpgid      bool
+
+	// Criu sets the path to the criu binary used for checkpoint and restore.
+	//
+	// Deprecated: runc option --criu is now ignored (with a warning), and the
+	// option will be removed entirely in a future release. Users who need a non-
+	// standard criu binary should rely on the standard way of looking up binaries
+	// in $PATH.
 	Criu          string
 	SystemdCgroup bool
 	Rootless      *bool // nil stands for "auto"
@@ -726,9 +733,6 @@ func (r *Runc) args() (out []string) {
 	}
 	if r.LogFormat != none {
 		out = append(out, "--log-format", string(r.LogFormat))
-	}
-	if r.Criu != "" {
-		out = append(out, "--criu", r.Criu)
 	}
 	if r.SystemdCgroup {
 		out = append(out, "--systemd-cgroup")
