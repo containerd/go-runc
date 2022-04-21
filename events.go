@@ -30,7 +30,7 @@ type Event struct {
 
 // Stats is statistical information from the runc process
 type Stats struct {
-	Cpu     Cpu                `json:"cpu"` //nolint:golint
+	Cpu     Cpu                `json:"cpu"` //revive:disable
 	Memory  Memory             `json:"memory"`
 	Pids    Pids               `json:"pids"`
 	Blkio   Blkio              `json:"blkio"`
@@ -78,7 +78,8 @@ type Throttling struct {
 }
 
 // CpuUsage represents the CPU usage statistics
-type CpuUsage struct { //nolint:golint
+//revive:disable-next-line
+type CpuUsage struct {
 	// Units: nanoseconds.
 	Total  uint64   `json:"total,omitempty"`
 	Percpu []uint64 `json:"percpu,omitempty"`
@@ -87,7 +88,8 @@ type CpuUsage struct { //nolint:golint
 }
 
 // Cpu represents the CPU usage and throttling statistics
-type Cpu struct { //nolint:golint
+//revive:disable-next-line
+type Cpu struct {
 	Usage      CpuUsage   `json:"usage,omitempty"`
 	Throttling Throttling `json:"throttling,omitempty"`
 }
