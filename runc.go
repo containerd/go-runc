@@ -53,6 +53,9 @@ const (
 	JSON Format = "json"
 	// Text represents plain text format
 	Text Format = "text"
+)
+
+var (
 	// DefaultCommand is the default command for Runc
 	DefaultCommand = "runc"
 )
