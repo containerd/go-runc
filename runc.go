@@ -64,11 +64,22 @@ var (
 type Runc struct {
 	// Command overrides the name of the runc binary. If empty, DefaultCommand
 	// is used.
-	Command      string
-	Root         string
-	Debug        bool
-	Log          string
-	LogFormat    Format
+	Command   string
+	Root      string
+	Debug     bool
+	Log       string
+	LogFormat Format
+	// PdeathSignal sets a signal the child process will receive when the
+	// parent dies.
+	//
+	// When Pdeathsig is set, command invocations will call runtime.LockOSThread
+	// to prevent OS thread termination from spuriously triggering the
+	// signal. See https://github.com/golang/go/issues/27505 and
+	// https://github.com/golang/go/blob/126c22a09824a7b52c019ed9a1d198b4e7781676/src/syscall/exec_linux.go#L48-L51
+	//
+	// A program with GOMAXPROCS=1 might hang because of the use of
+	// runtime.LockOSThread. Callers should ensure they retain at least one
+	// unlocked thread.
 	PdeathSignal syscall.Signal // using syscall.Signal to allow compilation on non-unix (unix.Syscall is an alias for syscall.Signal)
 	Setpgid      bool
 
@@ -86,7 +97,7 @@ type Runc struct {
 
 // List returns all containers created inside the provided runc root directory
 func (r *Runc) List(context context.Context) ([]*Container, error) {
-	data, err := cmdOutput(r.command(context, "list", "--format=json"), false, nil)
+	data, err := r.cmdOutput(r.command(context, "list", "--format=json"), false, nil)
 	defer putBuf(data)
 	if err != nil {
 		return nil, err
@@ -100,7 +111,7 @@ func (r *Runc) List(context context.Context) ([]*Container, error) {
 
 // State returns the state for the container provided by id
 func (r *Runc) State(context context.Context, id string) (*Container, error) {
-	data, err := cmdOutput(r.command(context, "state", id), true, nil)
+	data, err := r.cmdOutput(r.command(context, "state", id), true, nil)
 	defer putBuf(data)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %s", err, data.String())
@@ -160,6 +171,13 @@ func (o *CreateOpts) args() (out []string, err error) {
 	return out, nil
 }
 
+func (r *Runc) startCommand(cmd *exec.Cmd) (chan Exit, error) {
+	if r.PdeathSignal != 0 {
+		return Monitor.StartLocked(cmd)
+	}
+	return Monitor.Start(cmd)
+}
+
 // Create creates a new container and returns its pid if it was created successfully
 func (r *Runc) Create(context context.Context, id, bundle string, opts *CreateOpts) error {
 	args := []string{"create", "--bundle", bundle}
@@ -177,14 +195,14 @@ func (r *Runc) Create(context context.Context, id, bundle string, opts *CreateOp
 	cmd.ExtraFiles = opts.ExtraFiles
 
 	if cmd.Stdout == nil && cmd.Stderr == nil {
-		data, err := cmdOutput(cmd, true, nil)
+		data, err := r.cmdOutput(cmd, true, nil)
 		defer putBuf(data)
 		if err != nil {
 			return fmt.Errorf("%s: %s", err, data.String())
 		}
 		return nil
 	}
-	ec, err := Monitor.Start(cmd)
+	ec, err := r.startCommand(cmd)
 	if err != nil {
 		return err
 	}
@@ -266,14 +284,14 @@ func (r *Runc) Exec(context context.Context, id string, spec specs.Process, opts
 		opts.Set(cmd)
 	}
 	if cmd.Stdout == nil && cmd.Stderr == nil {
-		data, err := cmdOutput(cmd, true, opts.Started)
+		data, err := r.cmdOutput(cmd, true, opts.Started)
 		defer putBuf(data)
 		if err != nil {
 			return fmt.Errorf("%w: %s", err, data.String())
 		}
 		return nil
 	}
-	ec, err := Monitor.Start(cmd)
+	ec, err := r.startCommand(cmd)
 	if err != nil {
 		return err
 	}
@@ -312,7 +330,7 @@ func (r *Runc) Run(context context.Context, id, bundle string, opts *CreateOpts)
 	if opts != nil && opts.IO != nil {
 		opts.Set(cmd)
 	}
-	ec, err := Monitor.Start(cmd)
+	ec, err := r.startCommand(cmd)
 	if err != nil {
 		return -1, err
 	}
@@ -385,7 +403,7 @@ func (r *Runc) Stats(context context.Context, id string) (*Stats, error) {
 	if err != nil {
 		return nil, err
 	}
-	ec, err := Monitor.Start(cmd)
+	ec, err := r.startCommand(cmd)
 	if err != nil {
 		return nil, err
 	}
@@ -407,7 +425,7 @@ func (r *Runc) Events(context context.Context, id string, interval time.Duration
 	if err != nil {
 		return nil, err
 	}
-	ec, err := Monitor.Start(cmd)
+	ec, err := r.startCommand(cmd)
 	if err != nil {
 		rd.Close()
 		return nil, err
@@ -451,7 +469,7 @@ func (r *Runc) Resume(context context.Context, id string) error {
 
 // Ps lists all the processes inside the container returning their pids
 func (r *Runc) Ps(context context.Context, id string) ([]int, error) {
-	data, err := cmdOutput(r.command(context, "ps", "--format", "json", id), true, nil)
+	data, err := r.cmdOutput(r.command(context, "ps", "--format", "json", id), true, nil)
 	defer putBuf(data)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %s", err, data.String())
@@ -465,7 +483,7 @@ func (r *Runc) Ps(context context.Context, id string) ([]int, error) {
 
 // Top lists all the processes inside the container returning the full ps data
 func (r *Runc) Top(context context.Context, id string, psOptions string) (*TopResults, error) {
-	data, err := cmdOutput(r.command(context, "ps", "--format", "table", id, psOptions), true, nil)
+	data, err := r.cmdOutput(r.command(context, "ps", "--format", "table", id, psOptions), true, nil)
 	defer putBuf(data)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %s", err, data.String())
@@ -650,7 +668,7 @@ func (r *Runc) Restore(context context.Context, id, bundle string, opts *Restore
 	if opts != nil && opts.IO != nil {
 		opts.Set(cmd)
 	}
-	ec, err := Monitor.Start(cmd)
+	ec, err := r.startCommand(cmd)
 	if err != nil {
 		return -1, err
 	}
@@ -694,7 +712,7 @@ type Version struct {
 
 // Version returns the runc and runtime-spec versions
 func (r *Runc) Version(context context.Context) (Version, error) {
-	data, err := cmdOutput(r.command(context, "--version"), false, nil)
+	data, err := r.cmdOutput(r.command(context, "--version"), false, nil)
 	defer putBuf(data)
 	if err != nil {
 		return Version{}, err
@@ -756,7 +774,7 @@ func (r *Runc) args() (out []string) {
 // <stderr>
 func (r *Runc) runOrError(cmd *exec.Cmd) error {
 	if cmd.Stdout != nil || cmd.Stderr != nil {
-		ec, err := Monitor.Start(cmd)
+		ec, err := r.startCommand(cmd)
 		if err != nil {
 			return err
 		}
@@ -766,7 +784,7 @@ func (r *Runc) runOrError(cmd *exec.Cmd) error {
 		}
 		return err
 	}
-	data, err := cmdOutput(cmd, true, nil)
+	data, err := r.cmdOutput(cmd, true, nil)
 	defer putBuf(data)
 	if err != nil {
 		return fmt.Errorf("%s: %s", err, data.String())
@@ -776,14 +794,14 @@ func (r *Runc) runOrError(cmd *exec.Cmd) error {
 
 // callers of cmdOutput are expected to call putBuf on the returned Buffer
 // to ensure it is released back to the shared pool after use.
-func cmdOutput(cmd *exec.Cmd, combined bool, started chan<- int) (*bytes.Buffer, error) {
+func (r *Runc) cmdOutput(cmd *exec.Cmd, combined bool, started chan<- int) (*bytes.Buffer, error) {
 	b := getBuf()
 
 	cmd.Stdout = b
 	if combined {
 		cmd.Stderr = b
 	}
-	ec, err := Monitor.Start(cmd)
+	ec, err := r.startCommand(cmd)
 	if err != nil {
 		return nil, err
 	}
