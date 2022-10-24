@@ -18,7 +18,7 @@ package runc
 
 import (
 	"bytes"
-	"io/ioutil"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -27,7 +27,7 @@ import (
 // ReadPidFile reads the pid file at the provided path and returns
 // the pid or an error if the read and conversion is unsuccessful
 func ReadPidFile(path string) (int, error) {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return -1, err
 	}

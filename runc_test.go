@@ -19,7 +19,6 @@ package runc
 import (
 	"context"
 	"errors"
-	"io/ioutil"
 	"os"
 	"sync"
 	"syscall"
@@ -290,7 +289,7 @@ func interrupt(ctx context.Context, t *testing.T, started <-chan int) {
 // dummySleepRunc creates s simple script that just runs `sleep 10` to replace
 // runc for testing process that are longer running.
 func dummySleepRunc() (_ string, err error) {
-	fh, err := ioutil.TempFile("", "*.sh")
+	fh, err := os.CreateTemp("", "*.sh")
 	if err != nil {
 		return "", err
 	}
