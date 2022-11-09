@@ -21,7 +21,6 @@ package runc
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
@@ -54,7 +53,7 @@ func NewConsoleSocket(path string) (*Socket, error) {
 // On Close(), the socket is deleted
 func NewTempConsoleSocket() (*Socket, error) {
 	runtimeDir := os.Getenv("XDG_RUNTIME_DIR")
-	dir, err := ioutil.TempDir(runtimeDir, "pty")
+	dir, err := os.MkdirTemp(runtimeDir, "pty")
 	if err != nil {
 		return nil, err
 	}

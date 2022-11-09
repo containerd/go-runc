@@ -23,7 +23,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -261,7 +260,7 @@ func (r *Runc) Exec(context context.Context, id string, spec specs.Process, opts
 	if opts.Started != nil {
 		defer close(opts.Started)
 	}
-	f, err := ioutil.TempFile(os.Getenv("XDG_RUNTIME_DIR"), "runc-process")
+	f, err := os.CreateTemp(os.Getenv("XDG_RUNTIME_DIR"), "runc-process")
 	if err != nil {
 		return err
 	}
