@@ -48,8 +48,7 @@ type ProcessMonitor interface {
 	Wait(*exec.Cmd, chan Exit) (int, error)
 }
 
-type defaultMonitor struct {
-}
+type defaultMonitor struct{}
 
 func (m *defaultMonitor) Start(c *exec.Cmd) (chan Exit, error) {
 	if err := c.Start(); err != nil {

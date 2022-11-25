@@ -78,6 +78,7 @@ type Throttling struct {
 }
 
 // CpuUsage represents the CPU usage statistics
+//
 //revive:disable-next-line
 type CpuUsage struct {
 	// Units: nanoseconds.
@@ -88,6 +89,7 @@ type CpuUsage struct {
 }
 
 // Cpu represents the CPU usage and throttling statistics
+//
 //revive:disable-next-line
 type Cpu struct {
 	Usage      CpuUsage   `json:"usage,omitempty"`

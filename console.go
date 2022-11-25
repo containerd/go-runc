@@ -70,7 +70,7 @@ func NewTempConsoleSocket() (*Socket, error) {
 		return nil, err
 	}
 	if runtimeDir != "" {
-		if err := os.Chmod(abs, 0755|os.ModeSticky); err != nil {
+		if err := os.Chmod(abs, 0o755|os.ModeSticky); err != nil {
 			return nil, err
 		}
 	}
@@ -96,7 +96,7 @@ func (c *Socket) Path() string {
 // locally (it is sent as non-auxiliary data in the same payload).
 func recvFd(socket *net.UnixConn) (*os.File, error) {
 	const MaxNameLen = 4096
-	var oobSpace = unix.CmsgSpace(4)
+	oobSpace := unix.CmsgSpace(4)
 
 	name := make([]byte, MaxNameLen)
 	oob := make([]byte, oobSpace)

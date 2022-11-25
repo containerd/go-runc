@@ -157,8 +157,7 @@ func NewSTDIO() (IO, error) {
 	return &stdio{}, nil
 }
 
-type stdio struct {
-}
+type stdio struct{}
 
 func (s *stdio) Close() error {
 	return nil
