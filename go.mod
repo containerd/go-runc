@@ -1,6 +1,6 @@
 module github.com/containerd/go-runc
 
-go 1.16
+go 1.18
 
 require (
 	github.com/containerd/console v1.0.3
