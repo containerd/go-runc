@@ -54,10 +54,8 @@ const (
 	Text Format = "text"
 )
 
-var (
-	// DefaultCommand is the default command for Runc
-	DefaultCommand = "runc"
-)
+// DefaultCommand is the default command for Runc
+var DefaultCommand = "runc"
 
 // Runc is the client to the runc cli
 type Runc struct {

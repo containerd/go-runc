@@ -306,7 +306,7 @@ func dummySleepRunc() (_ string, err error) {
 	if err != nil {
 		return "", err
 	}
-	err = os.Chmod(fh.Name(), 0755)
+	err = os.Chmod(fh.Name(), 0o755)
 	if err != nil {
 		return "", err
 	}
@@ -333,5 +333,4 @@ func TestCreateArgs(t *testing.T) {
 	if a := args[0]; a != "--other" {
 		t.Fatalf("arg should be --other but got %q", a)
 	}
-
 }
