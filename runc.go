@@ -327,6 +327,7 @@ func (r *Runc) Run(context context.Context, id, bundle string, opts *CreateOpts)
 	if opts != nil && opts.IO != nil {
 		opts.Set(cmd)
 	}
+	cmd.ExtraFiles = opts.ExtraFiles
 	ec, err := r.startCommand(cmd)
 	if err != nil {
 		return -1, err
