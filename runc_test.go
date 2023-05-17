@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"os/exec"
 	"sync"
 	"syscall"
 	"testing"
@@ -332,5 +333,26 @@ func TestCreateArgs(t *testing.T) {
 	}
 	if a := args[0]; a != "--other" {
 		t.Fatalf("arg should be --other but got %q", a)
+	}
+}
+
+func TestRuncFeatures(t *testing.T) {
+	ctx := context.Background()
+	if _, err := exec.LookPath(DefaultCommand); err != nil {
+		t.Skipf("%q was not found in PATH", DefaultCommand)
+	}
+	runc := &Runc{}
+	feat, err := runc.Features(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rroPresent bool
+	for _, f := range feat.MountOptions {
+		if f == "rro" {
+			rroPresent = true
+		}
+	}
+	if !rroPresent {
+		t.Fatalf("\"rro\" was not found in feat.MountOptions (feat=%+v)", feat)
 	}
 }
