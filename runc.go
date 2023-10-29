@@ -423,7 +423,7 @@ func (r *Runc) Stats(context context.Context, id string) (*Stats, error) {
 
 // Events returns an event stream from runc for a container with stats and OOM notifications
 func (r *Runc) Events(context context.Context, id string, interval time.Duration) (chan *Event, error) {
-	cmd := r.command(context, "events", fmt.Sprintf("--interval=%ds", int(interval.Seconds())), id)
+	cmd := r.command(context, "events", fmt.Sprintf("--interval=%s", interval.String()), id)
 	rd, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, err
