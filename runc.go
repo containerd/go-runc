@@ -526,7 +526,9 @@ type CheckpointOpts struct {
 	LazyPages bool
 	// StatusFile is the file criu writes \0 to once lazy-pages is ready
 	StatusFile *os.File
-	ExtraArgs  []string
+	// AutoDedup enables auto deduplication of memory images
+	AutoDedup bool
+	ExtraArgs []string
 }
 
 // CgroupMode defines the cgroup mode used for checkpointing
@@ -574,6 +576,9 @@ func (o *CheckpointOpts) args() (out []string) {
 	}
 	if o.LazyPages {
 		out = append(out, "--lazy-pages")
+	}
+	if o.AutoDedup {
+		out = append(out, "--auto-dedup")
 	}
 	if len(o.ExtraArgs) > 0 {
 		out = append(out, o.ExtraArgs...)

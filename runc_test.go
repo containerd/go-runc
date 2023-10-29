@@ -287,7 +287,7 @@ func interrupt(ctx context.Context, t *testing.T, started <-chan int) {
 	}
 }
 
-// dummySleepRunc creates s simple script that just runs `sleep 10` to replace
+// dummySleepRunc creates a simple script that just runs `sleep 10` to replace
 // runc for testing process that are longer running.
 func dummySleepRunc() (_ string, err error) {
 	fh, err := os.CreateTemp("", "*.sh")
@@ -314,6 +314,42 @@ func dummySleepRunc() (_ string, err error) {
 	return fh.Name(), nil
 }
 
+func TestRuncCheckpoint(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	okRunc := &Runc{
+		Command: "/bin/true",
+	}
+
+	opts := &CheckpointOpts{
+		AutoDedup: true,
+	}
+	err := okRunc.Checkpoint(ctx, "fake-id", opts)
+	if err != nil {
+		t.Fatalf("unexpected error from Checkpoint: %v", err)
+	}
+}
+
+func TestRuncRestore(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	okRunc := &Runc{
+		Command: "/bin/true",
+	}
+
+	opts := &RestoreOpts{
+		CheckpointOpts: CheckpointOpts{
+			AutoDedup: true,
+		},
+	}
+	_, err := okRunc.Restore(ctx, "fake-id", "fake-bundle", opts)
+	if err != nil {
+		t.Fatalf("unexpected error from Checkpoint: %v", err)
+	}
+}
+
 func TestCreateArgs(t *testing.T) {
 	o := &CreateOpts{}
 	args, err := o.args()
@@ -333,6 +369,24 @@ func TestCreateArgs(t *testing.T) {
 	}
 	if a := args[0]; a != "--other" {
 		t.Fatalf("arg should be --other but got %q", a)
+	}
+}
+
+func TestCheckpointArgs(t *testing.T) {
+	o := &CheckpointOpts{}
+	args := o.args()
+	if len(args) != 0 {
+		t.Fatal("args should be empty")
+	}
+	o = &CheckpointOpts{
+		AutoDedup: true,
+	}
+	args = o.args()
+	if len(args) != 1 {
+		t.Fatal("args should have 1 arg")
+	}
+	if actual := args[0]; actual != "--auto-dedup" {
+		t.Fatalf("arg should be --auto-dedup but got %s", actual)
 	}
 }
 
