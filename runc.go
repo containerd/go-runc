@@ -131,6 +131,8 @@ type CreateOpts struct {
 	IO
 	// PidFile is a path to where a pid file should be created
 	PidFile       string
+	ConfigPath    string
+	OutputWriter  io.Writer
 	ConsoleSocket ConsoleSocket
 	Detach        bool
 	NoPivot       bool
@@ -165,6 +167,9 @@ func (o *CreateOpts) args() (out []string, err error) {
 	}
 	if len(o.ExtraArgs) > 0 {
 		out = append(out, o.ExtraArgs...)
+	}
+	if o.ConfigPath != "" {
+		out = append(out, "--config", o.ConfigPath)
 	}
 	return out, nil
 }
@@ -233,6 +238,7 @@ type ExecOpts struct {
 	Detach        bool
 	Started       chan<- int
 	ExtraArgs     []string
+	OutputWriter  io.Writer
 }
 
 func (o *ExecOpts) args() (out []string, err error) {
@@ -284,6 +290,10 @@ func (r *Runc) Exec(context context.Context, id string, spec specs.Process, opts
 	if opts.IO != nil {
 		opts.Set(cmd)
 	}
+	if opts.OutputWriter != nil {
+		cmd.Stdout = opts.OutputWriter
+		cmd.Stderr = opts.OutputWriter
+	}
 	if cmd.Stdout == nil && cmd.Stderr == nil {
 		data, err := r.cmdOutput(cmd, true, opts.Started)
 		defer putBuf(data)
@@ -331,6 +341,10 @@ func (r *Runc) Run(context context.Context, id, bundle string, opts *CreateOpts)
 	cmd := r.command(context, append(args, id)...)
 	if opts.IO != nil {
 		opts.Set(cmd)
+	}
+	if opts.OutputWriter != nil {
+		cmd.Stdout = opts.OutputWriter
+		cmd.Stderr = opts.OutputWriter
 	}
 	cmd.ExtraFiles = opts.ExtraFiles
 	ec, err := r.startCommand(cmd)
