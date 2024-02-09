@@ -15,7 +15,7 @@ jobs:
 
     strategy:
       matrix:
-        go-version: [1.20.x]
+        go-version: [1.21.x]
         os: [ubuntu-22.04]
 
     steps:
@@ -45,7 +45,7 @@ jobs:
 
     strategy:
       matrix:
-        go-version: [1.20.x]
+        go-version: [1.21.x]
         os: [ubuntu-22.04]
 
     steps:
@@ -76,7 +76,7 @@ jobs:
 
     strategy:
       matrix:
-        go-version: [1.18.x, 1.19.x, 1.20.x]
+        go-version: [1.21.x, 1.22.x]
         os: [ubuntu-22.04]
 
     steps:
