@@ -21,6 +21,7 @@ import (
 	"errors"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 	"syscall"
 	"testing"
@@ -333,6 +334,33 @@ func TestCreateArgs(t *testing.T) {
 	}
 	if a := args[0]; a != "--other" {
 		t.Fatalf("arg should be --other but got %q", a)
+	}
+}
+
+func TestExecWithLogFile(t *testing.T) {
+	ctx := context.Background()
+	o := &Runc{}
+	cmd := o.commandWithCustomLogFile(ctx, "/tmp/exec.log", "version")
+	if got := strings.Join(cmd.Args[1:], " "); got != "--log /tmp/exec.log version" {
+		t.Fatalf("expected args %q, got %q", "--log /tmp/exec.log version", got)
+	}
+
+	o = &Runc{Log: "/tmp/runc.log"}
+	cmd = o.commandWithCustomLogFile(ctx, "/tmp/exec.log", "version")
+	if got := strings.Join(cmd.Args[1:], " "); got != "--log /tmp/exec.log version" {
+		t.Fatalf("expected args %q, got %q", "--log /tmp/exec.log version", got)
+	}
+
+	o = &Runc{Log: "/tmp/runc.log"}
+	cmd = o.commandWithCustomLogFile(ctx, "", "version")
+	if got := strings.Join(cmd.Args[1:], " "); got != "--log /tmp/runc.log version" {
+		t.Fatalf("expected args %q, got %q", "--log /tmp/runc.log version", got)
+	}
+
+	o = &Runc{}
+	cmd = o.commandWithCustomLogFile(ctx, "", "version")
+	if got := strings.Join(cmd.Args[1:], " "); got != "version" {
+		t.Fatalf("expected args %q, got %q", "version", got)
 	}
 }
 
