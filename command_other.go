@@ -33,3 +33,7 @@ func (r *Runc) command(context context.Context, args ...string) *exec.Cmd {
 	cmd.Env = os.Environ()
 	return cmd
 }
+
+// finalizeCommand is a no-op on non-Linux platforms.
+// CommandFile-based execution via /proc/self/fd/<n> is only supported on Linux.
+func (r *Runc) finalizeCommand(_ *exec.Cmd) {}

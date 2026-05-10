@@ -61,7 +61,7 @@ var DefaultCommand = "runc"
 // Runc is the client to the runc cli
 type Runc struct {
 	// Command overrides the name of the runc binary. If empty, DefaultCommand
-	// is used.
+	// is used. On Linux, CommandFile takes precedence over this field when set.
 	Command   string
 	Root      string
 	Debug     bool
@@ -91,6 +91,18 @@ type Runc struct {
 	SystemdCgroup bool
 	Rootless      *bool // nil stands for "auto"
 	ExtraArgs     []string
+
+	// CommandFile is an open file for the runc binary. On Linux, when set,
+	// each invocation executes the binary via /proc/self/fd/<n> so the
+	// original file path need not remain accessible after the file is opened.
+	// This is semantically equivalent to execveat(fd, "", argv, env,
+	// AT_EMPTY_PATH): the binary is identified solely by its open file
+	// descriptor, not by any filesystem path.
+	//
+	// CommandFile takes precedence over Command and DefaultCommand on Linux.
+	// The caller is responsible for keeping the file open for the lifetime of
+	// the Runc instance. Ignored on non-Linux platforms.
+	CommandFile *os.File
 }
 
 // List returns all containers created inside the provided runc root directory
@@ -170,6 +182,7 @@ func (o *CreateOpts) args() (out []string, err error) {
 }
 
 func (r *Runc) startCommand(cmd *exec.Cmd) (chan Exit, error) {
+	r.finalizeCommand(cmd)
 	if r.PdeathSignal != 0 {
 		return Monitor.StartLocked(cmd)
 	}

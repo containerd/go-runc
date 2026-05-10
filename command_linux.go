@@ -18,6 +18,7 @@ package runc
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"strings"
@@ -29,7 +30,21 @@ func (r *Runc) command(context context.Context, args ...string) *exec.Cmd {
 	if command == "" {
 		command = DefaultCommand
 	}
+	if r.CommandFile != nil {
+		// Use the file's name as argv[0] and for the initial path; it may be
+		// a path that no longer exists on disk. finalizeCommand replaces
+		// cmd.Path with /proc/self/fd/<n> before the process is started.
+		if name := r.CommandFile.Name(); name != "" {
+			command = name
+		}
+	}
 	cmd := exec.CommandContext(context, command, append(r.args(), args...)...)
+	if r.CommandFile != nil {
+		// Suppress any path-lookup error: the binary will be exec'd via
+		// /proc/self/fd/<n> (set by finalizeCommand) so accessibility of the
+		// original path at this point doesn't matter.
+		cmd.Err = nil
+	}
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Setpgid: r.Setpgid,
 	}
@@ -39,6 +54,26 @@ func (r *Runc) command(context context.Context, args ...string) *exec.Cmd {
 	}
 
 	return cmd
+}
+
+// finalizeCommand sets cmd.Path to /proc/self/fd/<n> and appends
+// r.CommandFile to cmd.ExtraFiles so that the runc binary is executed
+// from the open file descriptor rather than by filesystem path. This is
+// semantically equivalent to execveat(fd, "", argv, env, AT_EMPTY_PATH).
+//
+// Appending the file last preserves the FD positions of any ExtraFiles
+// already present (e.g. for --preserve-fds or --status-fd), which are
+// therefore unaffected by use of CommandFile.
+//
+// Must be called after all modifications to cmd.ExtraFiles are complete
+// and before cmd.Start(). startCommand calls it automatically.
+func (r *Runc) finalizeCommand(cmd *exec.Cmd) {
+	if r.CommandFile == nil {
+		return
+	}
+	fdNum := 3 + len(cmd.ExtraFiles)
+	cmd.ExtraFiles = append(cmd.ExtraFiles, r.CommandFile)
+	cmd.Path = fmt.Sprintf("/proc/self/fd/%d", fdNum)
 }
 
 func filterEnv(in []string, names ...string) []string {
