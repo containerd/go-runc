@@ -38,6 +38,7 @@ func (r *Runc) commandWithCustomLogFile(context context.Context, logFile string,
 		Setpgid: r.Setpgid,
 	}
 	cmd.Env = filterEnv(os.Environ(), "NOTIFY_SOCKET") // NOTIFY_SOCKET introduces a special behavior in runc but should only be set if invoked from systemd
+	cmd.Dir = r.WorkDir
 	if r.PdeathSignal != 0 {
 		cmd.SysProcAttr.Pdeathsig = r.PdeathSignal
 	}

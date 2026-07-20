@@ -35,5 +35,6 @@ func (r *Runc) commandWithCustomLogFile(context context.Context, logFile string,
 	}
 	cmd := exec.CommandContext(context, command, append(r.args(logFile), args...)...)
 	cmd.Env = os.Environ()
+	cmd.Dir = r.WorkDir
 	return cmd
 }
