@@ -126,18 +126,28 @@ type ConsoleSocket interface {
 	Path() string
 }
 
+// PidfdSocket handles the path of the socket which receives the pidfd of the
+// process runc creates.
+type PidfdSocket interface {
+	Path() string
+}
+
 // CreateOpts holds all the options information for calling runc with supported options
 type CreateOpts struct {
 	IO
 	// PidFile is a path to where a pid file should be created
 	PidFile       string
 	ConsoleSocket ConsoleSocket
-	Detach        bool
-	NoPivot       bool
-	NoNewKeyring  bool
-	ExtraFiles    []*os.File
-	Started       chan<- int
-	ExtraArgs     []string
+	// PidfdSocket receives a pidfd referencing the container's init process,
+	// which lets the caller signal or wait on it without racing against pid
+	// reuse. Requires runc v1.2.0 or newer.
+	PidfdSocket  PidfdSocket
+	Detach       bool
+	NoPivot      bool
+	NoNewKeyring bool
+	ExtraFiles   []*os.File
+	Started      chan<- int
+	ExtraArgs    []string
 }
 
 func (o *CreateOpts) args() (out []string, err error) {
@@ -150,6 +160,9 @@ func (o *CreateOpts) args() (out []string, err error) {
 	}
 	if o.ConsoleSocket != nil {
 		out = append(out, "--console-socket", o.ConsoleSocket.Path())
+	}
+	if o.PidfdSocket != nil {
+		out = append(out, "--pidfd-socket", o.PidfdSocket.Path())
 	}
 	if o.NoPivot {
 		out = append(out, "--no-pivot")
@@ -230,14 +243,21 @@ type ExecOpts struct {
 	IO
 	PidFile       string
 	ConsoleSocket ConsoleSocket
-	Detach        bool
-	Started       chan<- int
-	ExtraArgs     []string
+	// PidfdSocket receives a pidfd referencing the exec'd process, which lets
+	// the caller signal or wait on it without racing against pid reuse.
+	// Requires runc v1.2.0 or newer.
+	PidfdSocket PidfdSocket
+	Detach      bool
+	Started     chan<- int
+	ExtraArgs   []string
 }
 
 func (o *ExecOpts) args() (out []string, err error) {
 	if o.ConsoleSocket != nil {
 		out = append(out, "--console-socket", o.ConsoleSocket.Path())
+	}
+	if o.PidfdSocket != nil {
+		out = append(out, "--pidfd-socket", o.PidfdSocket.Path())
 	}
 	if o.Detach {
 		out = append(out, "--detach")
