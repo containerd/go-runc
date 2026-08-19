@@ -59,6 +59,9 @@ const (
 var DefaultCommand = "runc"
 
 // Runc is the client to the runc cli
+//
+// Fields here apply to every invocation. For per-invocation settings see the
+// Opts types and WithExtraEnv.
 type Runc struct {
 	// Command overrides the name of the runc binary. If empty, DefaultCommand
 	// is used.
