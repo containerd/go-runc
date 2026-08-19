@@ -62,7 +62,10 @@ var DefaultCommand = "runc"
 type Runc struct {
 	// Command overrides the name of the runc binary. If empty, DefaultCommand
 	// is used.
-	Command   string
+	Command string
+	// WorkDir sets the working directory of the runc process. If empty, the
+	// working directory of the calling process is used.
+	WorkDir   string
 	Root      string
 	Debug     bool
 	Log       string

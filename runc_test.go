@@ -315,6 +315,27 @@ func dummySleepRunc() (_ string, err error) {
 	return fh.Name(), nil
 }
 
+func TestCommandWorkDir(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("WorkDir is unset", func(t *testing.T) {
+		r := &Runc{}
+		cmd := r.command(ctx, "list")
+		if cmd.Dir != "" {
+			t.Fatalf("expected empty cmd.Dir, got %q", cmd.Dir)
+		}
+	})
+
+	t.Run("WorkDir is set", func(t *testing.T) {
+		dir := t.TempDir()
+		r := &Runc{WorkDir: dir}
+		cmd := r.command(ctx, "list")
+		if cmd.Dir != dir {
+			t.Fatalf("expected cmd.Dir %q, got %q", dir, cmd.Dir)
+		}
+	})
+}
+
 func TestCreateArgs(t *testing.T) {
 	o := &CreateOpts{}
 	args, err := o.args()
