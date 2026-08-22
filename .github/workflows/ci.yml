@@ -22,14 +22,14 @@ jobs:
         os: [ubuntu-22.04]
 
     steps:
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version: ${{ matrix.go-version }}
-
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           path: project
           fetch-depth: 25
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ matrix.go-version }}
 
       - uses: containerd/project-checks@d7751f3c375b8fe4a84c02a068184ee4c1f59bc4 # v1.2.2
         with:
@@ -45,28 +45,32 @@ jobs:
 
     strategy:
       matrix:
-        go-version: [1.21.x]
+        go-version: [stable]
         os: [ubuntu-22.04]
 
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: ${{ matrix.go-version }}
-
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
           version: v2.13
 
   tests:
-    name: Tests
+    name: Tests (Go ${{ matrix.go-version || 'minimum' }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 5
 
     strategy:
+      fail-fast: false
       matrix:
-        go-version: [1.21.x, 1.22.x]
+        go-version:
+          - "" # leave empty to use go-version-file (use go.mod)
+          - oldstable
+          - stable
         os: [ubuntu-22.04]
 
     steps:
@@ -74,6 +78,7 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: ${{ matrix.go-version }}
+          go-version-file: go.mod # used when go-version is empty
       - run: |
           go test -v -race -covermode=atomic -coverprofile=coverage.txt ./...
           bash <(curl -s https://codecov.io/bash)
