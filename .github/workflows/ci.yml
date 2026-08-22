@@ -19,7 +19,7 @@ jobs:
         os: [ubuntu-22.04]
 
     steps:
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@v7.0.0
         with:
           go-version: ${{ matrix.go-version }}
 
@@ -29,7 +29,7 @@ jobs:
           echo "GOPATH=${{ github.workspace }}" >> $GITHUB_ENV
           echo "${{ github.workspace }}/bin" >> $GITHUB_PATH
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7.0.1
         with:
           path: src/github.com/containerd/go-runc
           fetch-depth: 25
@@ -49,11 +49,11 @@ jobs:
         os: [ubuntu-22.04]
 
     steps:
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@v7.0.0
         with:
           go-version: ${{ matrix.go-version }}
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7.0.1
         with:
           path: src/github.com/containerd/go-runc
 
@@ -63,11 +63,10 @@ jobs:
           echo "GOPATH=${{ github.workspace }}" >> $GITHUB_ENV
           echo "${{ github.workspace }}/bin" >> $GITHUB_PATH
 
-      - uses: golangci/golangci-lint-action@v3
+      - uses: golangci/golangci-lint-action@v9.3.0
         with:
-          version: v1.51.1
+          version: v2.13
           working-directory: src/github.com/containerd/go-runc
-          args: --timeout=5m
 
   tests:
     name: Tests
@@ -80,11 +79,11 @@ jobs:
         os: [ubuntu-22.04]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7.0.1
         with:
           path: src/github.com/containerd/go-runc
 
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@v7.0.0
         with:
           go-version: ${{ matrix.go-version }}
 
