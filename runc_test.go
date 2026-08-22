@@ -31,63 +31,56 @@ import (
 )
 
 func TestParseVersion(t *testing.T) {
-	testParseVersion := func(t *testing.T, input string, expected Version) {
-		actual, err := parseVersion([]byte(input))
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if expected != actual {
-			t.Fatalf("expected: %v, actual: %v", expected, actual)
-		}
-	}
-
-	t.Run("Full", func(t *testing.T) {
-		input := `runc version 1.0.0-rc3
+	tests := []struct {
+		doc, input string
+		expected   Version
+	}{
+		{
+			doc: "Full",
+			input: `runc version 1.0.0-rc3
 commit: 17f3e2a07439a024e54566774d597df9177ee216
 spec: 1.0.0-rc5-dev
-`
-		expected := Version{
-			Runc:   "1.0.0-rc3",
-			Commit: "17f3e2a07439a024e54566774d597df9177ee216",
-			Spec:   "1.0.0-rc5-dev",
-		}
-		testParseVersion(t, input, expected)
-	})
-
-	t.Run("WithoutCommit", func(t *testing.T) {
-		input := `runc version 1.0.0-rc9
+`,
+			expected: Version{
+				Runc:   "1.0.0-rc3",
+				Commit: "17f3e2a07439a024e54566774d597df9177ee216",
+				Spec:   "1.0.0-rc5-dev",
+			},
+		},
+		{
+			doc: "WithoutCommit",
+			input: `runc version 1.0.0-rc9
 spec: 1.0.1-dev
-`
-		expected := Version{
-			Runc:   "1.0.0-rc9",
-			Commit: "",
-			Spec:   "1.0.1-dev",
-		}
-		testParseVersion(t, input, expected)
-	})
-
-	t.Run("Oneline", func(t *testing.T) {
-		input := `runc version 1.0.0-rc8+dev
-`
-		expected := Version{
-			Runc:   "1.0.0-rc8+dev",
-			Commit: "",
-			Spec:   "",
-		}
-		testParseVersion(t, input, expected)
-	})
-
-	t.Run("Garbage", func(t *testing.T) {
-		input := `Garbage
+`,
+			expected: Version{
+				Runc: "1.0.0-rc9",
+				Spec: "1.0.1-dev",
+			},
+		},
+		{
+			doc: "Oneline",
+			input: `runc version 1.0.0-rc8+dev
+`,
+			expected: Version{
+				Runc: "1.0.0-rc8+dev",
+			},
+		},
+		{
+			doc: "Garbage",
+			input: `Garbage
 spec: nope
-`
-		expected := Version{
-			Runc:   "",
-			Commit: "",
-			Spec:   "",
-		}
-		testParseVersion(t, input, expected)
-	})
+`,
+			expected: Version{},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.doc, func(t *testing.T) {
+			actual := parseVersion([]byte(tc.input))
+			if tc.expected != actual {
+				t.Fatalf("expected: %v, actual: %v", tc.expected, actual)
+			}
+		})
+	}
 }
 
 func TestParallelCmds(t *testing.T) {
