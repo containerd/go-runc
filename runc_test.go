@@ -90,25 +90,28 @@ spec: nope
 	})
 }
 
+// TestParallelCmds exercises concurrent callers of cmdOutput and is primarily
+// intended to detect unsafe shared state when run with the race detector.
 func TestParallelCmds(t *testing.T) {
-	rc := &Runc{
-		// we don't need a real runc, we just want to test running a caller of cmdOutput in parallel
-		Command: "/bin/true",
-	}
-	var wg sync.WaitGroup
+	// we don't need a real runc, we just want to test running a caller of cmdOutput in parallel
+	rc := &Runc{Command: "/bin/true"}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	var wg sync.WaitGroup
+	start := make(chan struct{})
 
 	for i := 0; i < 256; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			// We just want to fail if there is a race condition detected by
-			// "-race", so we ignore the (expected) error here.
-			_, _ = rc.Version(ctx)
+			<-start
+
+			if _, err := rc.Version(context.Background()); err != nil {
+				t.Error("expected parsing an empty version to pass")
+			}
 		}()
 	}
+
+	close(start)
 	wg.Wait()
 }
 
