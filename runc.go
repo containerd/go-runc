@@ -14,6 +14,10 @@
    limitations under the License.
 */
 
+// Package runc provides Go bindings for invoking and interacting with the
+// [runc] command-line interface.
+//
+// [runc]: https://github.com/opencontainers/runc
 package runc
 
 import (
