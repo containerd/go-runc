@@ -24,16 +24,13 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          path: project
           fetch-depth: 25
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: ${{ matrix.go-version }}
 
-      - uses: containerd/project-checks@d7751f3c375b8fe4a84c02a068184ee4c1f59bc4 # v1.2.2
-        with:
-          working-directory: project
+      - uses: thaJeztah/project-checks@774919130d95adbf99c948b88cc0bde31badccfa # https://github.com/containerd/project-checks/pull/25
 
   linters:
     name: Linters
