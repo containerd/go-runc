@@ -19,6 +19,8 @@
 package runc
 
 import (
+	"context"
+
 	"github.com/containerd/console"
 )
 
@@ -36,7 +38,7 @@ func NewTempConsoleSocket() (*Socket, error) {
 
 // ReceiveMaster blocks until the socket receives the pty master
 func (c *Socket) ReceiveMaster() (console.Console, error) {
-	f, err := c.receive()
+	f, err := c.receive(context.Background())
 	if err != nil {
 		return nil, err
 	}

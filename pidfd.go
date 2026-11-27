@@ -19,6 +19,7 @@
 package runc
 
 import (
+	"context"
 	"os"
 )
 
@@ -50,5 +51,12 @@ func NewTempPidfdSocket() (*Socket, error) {
 // be used to signal or wait on the process without the pid reuse races that
 // come with a raw pid, e.g. with unix.PidfdSendSignal.
 func (c *Socket) ReceivePidfd() (*os.File, error) {
-	return c.receive()
+	return c.receive(context.Background())
+}
+
+// ReceivePidfdContext is ReceivePidfd that stops waiting once ctx is done and
+// returns ctx.Err(). It also ends the wait for a runtime that connects to the
+// socket but never sends the pidfd.
+func (c *Socket) ReceivePidfdContext(ctx context.Context) (*os.File, error) {
+	return c.receive(ctx)
 }

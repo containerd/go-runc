@@ -19,6 +19,7 @@
 package runc
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -27,6 +28,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"golang.org/x/sys/unix"
 )
@@ -53,6 +55,59 @@ func TestPidfdSocket(t *testing.T) {
 		// Signal 0 is a no-op which only checks the pidfd can be signalled through.
 		if err := unix.PidfdSendSignal(int(pidfd.Fd()), 0, nil, 0); err != nil {
 			t.Fatalf("cannot signal through the received pidfd: %v", err)
+		}
+	})
+
+	t.Run("context receive returns the pidfd", func(t *testing.T) {
+		s, err := NewPidfdSocket(testSocketPath(t))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer s.Close()
+
+		go sendFd(t, s.Path(), "standard", openPidfd(t, os.Getpid()))
+
+		pidfd, err := s.ReceivePidfdContext(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer pidfd.Close()
+		if pid := pidfdTargetPid(t, pidfd); pid != os.Getpid() {
+			t.Fatalf("expected a pidfd for pid %d, got one for %d", os.Getpid(), pid)
+		}
+	})
+
+	t.Run("context ends the wait for a connection", func(t *testing.T) {
+		s, err := NewPidfdSocket(testSocketPath(t))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer s.Close()
+
+		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		defer cancel()
+		if err := receivePidfdWithin(ctx, t, s); !errors.Is(err, context.DeadlineExceeded) {
+			t.Fatalf("expected %v, got %v", context.DeadlineExceeded, err)
+		}
+	})
+
+	t.Run("context ends the wait for a peer that never sends", func(t *testing.T) {
+		s, err := NewPidfdSocket(testSocketPath(t))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer s.Close()
+
+		conn, err := net.Dial("unix", s.Path())
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer conn.Close()
+
+		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		defer cancel()
+		if err := receivePidfdWithin(ctx, t, s); !errors.Is(err, context.DeadlineExceeded) {
+			t.Fatalf("expected %v, got %v", context.DeadlineExceeded, err)
 		}
 	})
 
@@ -118,6 +173,27 @@ func assertArgs(t *testing.T, got, expected []string) {
 		if got[i] != expected[i] {
 			t.Fatalf("expected args %v, got %v", expected, got)
 		}
+	}
+}
+
+// receivePidfdWithin calls ReceivePidfdContext and fails the test if it does
+// not return within 10 seconds, instead of hanging until the test timeout.
+func receivePidfdWithin(ctx context.Context, t *testing.T, s *Socket) error {
+	t.Helper()
+	errCh := make(chan error, 1)
+	go func() {
+		f, err := s.ReceivePidfdContext(ctx)
+		if f != nil {
+			f.Close()
+		}
+		errCh <- err
+	}()
+	select {
+	case err := <-errCh:
+		return err
+	case <-time.After(10 * time.Second):
+		t.Fatal("ReceivePidfdContext did not return")
+		return nil
 	}
 }
 
