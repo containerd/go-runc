@@ -19,10 +19,13 @@
 package runc
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"os"
 	"path/filepath"
+	"sync"
+	"time"
 
 	"golang.org/x/sys/unix"
 )
@@ -93,18 +96,46 @@ func (c *Socket) Close() error {
 	return err
 }
 
-// receive blocks until the socket receives a file descriptor
-func (c *Socket) receive() (*os.File, error) {
-	conn, err := c.l.Accept()
+// receive blocks until the socket receives a file descriptor, or until ctx is
+// done. A deadline in the past ends both a blocked accept and a blocked read
+// on the accepted connection; closing the listener only ends the accept.
+func (c *Socket) receive(ctx context.Context) (*os.File, error) {
+	var (
+		mu       sync.Mutex
+		conn     *net.UnixConn
+		canceled bool
+	)
+	stop := context.AfterFunc(ctx, func() {
+		mu.Lock()
+		defer mu.Unlock()
+		canceled = true
+		_ = c.l.SetDeadline(time.Unix(1, 0))
+		if conn != nil {
+			_ = conn.SetDeadline(time.Unix(1, 0))
+		}
+	})
+	defer stop()
+
+	uc, err := c.l.AcceptUnix()
 	if err != nil {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
 		return nil, err
 	}
-	defer conn.Close()
-	uc, ok := conn.(*net.UnixConn)
-	if !ok {
-		return nil, fmt.Errorf("received connection which was not a unix socket")
+	defer uc.Close()
+	mu.Lock()
+	conn = uc
+	if canceled {
+		_ = uc.SetDeadline(time.Unix(1, 0))
 	}
-	return recvFd(uc)
+	mu.Unlock()
+
+	f, err := recvFd(uc)
+	if err != nil && ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	return f, err
 }
 
 // recvFd waits for a file descriptor to be sent over the given AF_UNIX
